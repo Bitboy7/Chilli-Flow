@@ -1,1 +1,5 @@
-//! El escáner asíncrono de proyectos se implementará en la Fase 2.
+mod catalog;
+mod engine;
+
+pub use catalog::{normalize_extension, DawCatalog, KNOWN_DAWS};
+pub use engine::scan_directory;

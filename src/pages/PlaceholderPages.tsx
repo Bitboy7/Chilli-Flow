@@ -1,11 +1,9 @@
 import {
   AudioWaveform,
   Clock3,
-  FolderKanban,
   Gauge,
   Heart,
   History,
-  Settings2,
 } from "lucide-react";
 
 import { FeaturePlaceholder } from "../components/ui/FeaturePlaceholder";
@@ -58,18 +56,6 @@ export function StatusesPage() {
   );
 }
 
-export function FoldersPage() {
-  return (
-    <FeaturePlaceholder
-      icon={FolderKanban}
-      eyebrow="Administrar"
-      title="Carpetas supervisadas"
-      description="La selección explícita, activación y escaneo manual se implementarán aquí."
-      phase={2}
-    />
-  );
-}
-
 export function ScanHistoryPage() {
   return (
     <FeaturePlaceholder
@@ -78,18 +64,6 @@ export function ScanHistoryPage() {
       title="Historial de escaneos"
       description="SQLite ya dispone de la tabla de historial; esta pantalla se conectará tras completar el escáner."
       phase={6}
-    />
-  );
-}
-
-export function SettingsPage() {
-  return (
-    <FeaturePlaceholder
-      icon={Settings2}
-      eyebrow="Preferencias"
-      title="Configuración local"
-      description="Aquí se administrarán extensiones personalizadas y preferencias sin servicios externos."
-      phase={2}
     />
   );
 }

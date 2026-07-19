@@ -1,4 +1,4 @@
-mod migrations;
+pub(crate) mod migrations;
 
 use std::{
     fs,
@@ -50,7 +50,7 @@ impl Database {
     }
 }
 
-fn configure_connection(connection: &Connection) -> AppResult<()> {
+pub(crate) fn configure_connection(connection: &Connection) -> AppResult<()> {
     connection.busy_timeout(Duration::from_secs(5))?;
     connection.execute_batch(
         "PRAGMA foreign_keys = ON;

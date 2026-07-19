@@ -19,27 +19,33 @@ export function useAppStatus(): AppStatusState {
   useEffect(() => {
     let isActive = true;
 
-    getAppStatus()
-      .then((status) => {
-        if (isActive) {
-          setState({ status, error: null, isLoading: false });
-        }
-      })
-      .catch((error: unknown) => {
-        if (isActive) {
-          setState({
-            status: null,
-            error:
-              error instanceof Error
-                ? error.message
-                : "No fue posible inicializar Chilli Beat.",
-            isLoading: false,
-          });
-        }
-      });
+    const load = () => {
+      getAppStatus()
+        .then((status) => {
+          if (isActive) {
+            setState({ status, error: null, isLoading: false });
+          }
+        })
+        .catch((error: unknown) => {
+          if (isActive) {
+            setState({
+              status: null,
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "No fue posible inicializar Chilli Beat.",
+              isLoading: false,
+            });
+          }
+        });
+    };
+
+    load();
+    window.addEventListener("chilli:library-changed", load);
 
     return () => {
       isActive = false;
+      window.removeEventListener("chilli:library-changed", load);
     };
   }, []);
 

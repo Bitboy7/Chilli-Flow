@@ -8,7 +8,11 @@ import {
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 
+import { useFoldersStore } from "../../stores/folders-store";
+import { useScanStore } from "../../stores/scan-store";
+import { useToastStore } from "../../stores/toast-store";
 import { useUiStore, type LibraryView } from "../../stores/ui-store";
+import { errorMessage } from "../../utils/errors";
 import { pageTitles } from "./navigation";
 
 function ViewButton({
@@ -48,7 +52,42 @@ export function TopBar() {
   const { pathname } = useLocation();
   const libraryView = useUiStore((state) => state.libraryView);
   const setLibraryView = useUiStore((state) => state.setLibraryView);
+  const addSelectedFolder = useFoldersStore((state) => state.addSelected);
+  const isScanning = useScanStore((state) => state.isScanning);
+  const startScan = useScanStore((state) => state.start);
+  const pushToast = useToastStore((state) => state.push);
   const pageTitle = pageTitles[pathname] ?? "Chilli Beat";
+
+  const handleScan = async () => {
+    try {
+      await startScan();
+    } catch (error) {
+      pushToast({
+        kind: "error",
+        title: "No se pudo iniciar el escaneo",
+        description: errorMessage(error),
+      });
+    }
+  };
+
+  const handleImport = async () => {
+    try {
+      const folder = await addSelectedFolder();
+      if (folder) {
+        pushToast({
+          kind: "success",
+          title: "Carpeta agregada",
+          description: "Puedes iniciar el escaneo cuando estés listo.",
+        });
+      }
+    } catch (error) {
+      pushToast({
+        kind: "error",
+        title: "No se pudo agregar la carpeta",
+        description: errorMessage(error),
+      });
+    }
+  };
 
   return (
     <header className="flex min-h-[4.5rem] flex-wrap items-center gap-3 border-b border-white/[0.06] bg-[#171513]/90 px-5 py-3 backdrop-blur-xl lg:flex-nowrap lg:px-7">
@@ -105,17 +144,19 @@ export function TopBar() {
 
       <button
         type="button"
-        disabled
-        title="Disponible en la Fase 2"
-        className="hidden h-9 items-center gap-2 rounded-lg border border-white/[0.07] px-3 text-xs text-stone-500 disabled:cursor-not-allowed disabled:opacity-70 md:inline-flex"
+        onClick={() => void handleScan()}
+        disabled={isScanning}
+        title="Escanear todas las carpetas activas"
+        className="hidden h-9 items-center gap-2 rounded-lg border border-white/[0.07] px-3 text-xs text-stone-400 transition hover:bg-white/[0.04] hover:text-stone-100 disabled:cursor-not-allowed disabled:opacity-40 md:inline-flex"
       >
         <ScanSearch className="size-3.5" />
         Escanear
       </button>
       <button
         type="button"
-        disabled
-        title="Disponible en la Fase 2"
+        onClick={() => void handleImport()}
+        disabled={isScanning}
+        title="Seleccionar una carpeta"
         className="inline-flex h-9 items-center gap-2 rounded-lg bg-orange-500 px-3.5 text-xs font-semibold text-stone-950 shadow-[0_6px_24px_rgba(249,115,22,0.16)] disabled:cursor-not-allowed disabled:opacity-60"
       >
         <FolderPlus className="size-3.5" />

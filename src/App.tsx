@@ -2,13 +2,13 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 import { AppShell } from "./components/layout/AppShell";
 import { LibraryPage } from "./pages/LibraryPage";
+import { FoldersPage } from "./pages/FoldersPage";
+import { SettingsPage } from "./pages/SettingsPage";
 import {
   DawsPage,
   FavoritesPage,
-  FoldersPage,
   RecentProjectsPage,
   ScanHistoryPage,
-  SettingsPage,
   StatusesPage,
 } from "./pages/PlaceholderPages";
 

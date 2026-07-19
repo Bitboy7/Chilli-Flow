@@ -66,3 +66,12 @@ input:focus-visible {
   background: rgb(120 113 108 / 0.35);
   background-clip: padding-box;
 }
+
+@keyframes scan {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(310%);
+  }
+}
