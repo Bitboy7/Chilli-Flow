@@ -7,12 +7,18 @@ const coverCache = new Map<number, { path: string; dataUrl: string }>();
 const MAX_CACHED_COVERS = 128;
 
 type GeneratedArtworkData = {
-  accentHue: number;
-  baseHue: number;
-  circles: Array<{ opacity: number; radius: number; x: number; y: number }>;
+  anchorX: number;
+  anchorY: number;
+  palette: ArtworkPalette;
   rotation: number;
-  stripeOffset: number;
   variant: number;
+};
+
+type ArtworkPalette = {
+  accent: string;
+  background: string;
+  foreground: string;
+  mid: string;
 };
 
 function hashSeed(value: string) {
@@ -35,27 +41,37 @@ function seededRandom(seed: number) {
   };
 }
 
+function generateArtworkPalette(seed: string): ArtworkPalette {
+  const colorSeed = hashSeed(`${seed}:color`);
+  const baseHue = colorSeed % 360;
+  const accentHue = (baseHue + 32 + ((colorSeed >>> 8) % 92)) % 360;
+  const saturationShift = (colorSeed >>> 16) % 12;
+
+  return {
+    background: `hsl(${baseHue} ${20 + saturationShift}% 8%)`,
+    mid: `hsl(${baseHue} ${34 + saturationShift}% 23%)`,
+    accent: `hsl(${accentHue} ${48 + saturationShift}% 57%)`,
+    foreground: `hsl(${accentHue} ${28 + saturationShift}% 88%)`,
+  };
+}
+
 function generateArtworkData(seed: string): GeneratedArtworkData {
   const random = seededRandom(hashSeed(seed));
-  const baseHue = Math.floor(random() * 360);
   return {
-    baseHue,
-    accentHue: (baseHue + 35 + Math.floor(random() * 105)) % 360,
-    circles: Array.from({ length: 6 }, () => ({
-      x: random() * 100,
-      y: random() * 62.5,
-      radius: 8 + random() * 24,
-      opacity: 0.05 + random() * 0.13,
-    })),
-    rotation: -28 + random() * 56,
-    stripeOffset: random() * 18,
-    variant: Math.floor(random() * 3),
+    anchorX: 24 + random() * 52,
+    anchorY: 18 + random() * 27,
+    palette: generateArtworkPalette(seed),
+    rotation: -18 + random() * 36,
+    variant: Math.floor(random() * 4),
   };
 }
 
 function GeneratedArtwork({ seed }: { seed: string }) {
   const artwork = generateArtworkData(seed);
-  const gradientId = `project-artwork-${hashSeed(seed)}`;
+  const artworkId = hashSeed(seed);
+  const gradientId = `project-artwork-gradient-${artworkId}`;
+  const glowId = `project-artwork-glow-${artworkId}`;
+  const { accent, background, foreground, mid } = artwork.palette;
 
   return (
     <svg
@@ -66,51 +82,58 @@ function GeneratedArtwork({ seed }: { seed: string }) {
     >
       <defs>
         <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor={`hsl(${artwork.baseHue} 72% 38%)`} />
-          <stop offset="55%" stopColor={`hsl(${artwork.accentHue} 62% 24%)`} />
-          <stop offset="100%" stopColor={`hsl(${artwork.baseHue} 38% 7%)`} />
+          <stop offset="0%" stopColor={background} />
+          <stop offset="58%" stopColor={mid} />
+          <stop offset="100%" stopColor={background} />
         </linearGradient>
+        <radialGradient id={glowId}>
+          <stop offset="0%" stopColor={foreground} stopOpacity="0.7" />
+          <stop offset="45%" stopColor={accent} stopOpacity="0.38" />
+          <stop offset="100%" stopColor={accent} stopOpacity="0" />
+        </radialGradient>
       </defs>
 
       <rect width="100" height="62.5" fill={`url(#${gradientId})`} />
-      {artwork.circles.map((circle, index) => (
-        <circle
-          key={index}
-          cx={circle.x}
-          cy={circle.y}
-          r={circle.radius}
-          fill="white"
-          opacity={circle.opacity}
-        />
-      ))}
+      <circle cx={artwork.anchorX} cy={artwork.anchorY} r="38" fill={`url(#${glowId})`} />
 
       {artwork.variant === 0 ? (
-        <g
-          opacity="0.16"
-          stroke="white"
-          strokeWidth="2.2"
-          transform={`rotate(${artwork.rotation} 50 31.25)`}
-        >
-          {Array.from({ length: 7 }, (_, index) => (
-            <line key={index} x1={-15 + index * 18 + artwork.stripeOffset} y1="-10" x2={-15 + index * 18 + artwork.stripeOffset} y2="73" />
-          ))}
+        <g fill="none" transform={`rotate(${artwork.rotation} 50 31.25)`}>
+          <circle cx={artwork.anchorX} cy={artwork.anchorY} r="18" stroke={foreground} strokeOpacity="0.5" strokeWidth="0.8" />
+          <circle cx={artwork.anchorX} cy={artwork.anchorY} r="24" stroke={foreground} strokeOpacity="0.16" strokeWidth="0.55" />
         </g>
       ) : artwork.variant === 1 ? (
-        <g fill="none" stroke="white" opacity="0.2">
-          <circle cx="50" cy="31.25" r="10" />
-          <circle cx="50" cy="31.25" r="20" />
-          <circle cx="50" cy="31.25" r="30" />
+        <g transform={`rotate(${artwork.rotation} 50 31.25)`}>
+          <rect x="34" y="-13" width="32" height="88" rx="16" fill={accent} fillOpacity="0.27" />
+          <rect x="39" y="-13" width="32" height="88" rx="16" fill="none" stroke={foreground} strokeOpacity="0.35" strokeWidth="0.7" />
+        </g>
+      ) : artwork.variant === 2 ? (
+        <g transform={`translate(${artwork.anchorX - 50} ${artwork.anchorY - 31.25})`}>
+          <path d="M18 5 H82 C82 19 70 30 54 31.25 C70 32.5 82 43.5 82 57.5 H18 C18 43.5 30 32.5 46 31.25 C30 30 18 19 18 5Z" fill={accent} fillOpacity="0.34" />
+          <path d="M18 5 H82 M18 57.5 H82" fill="none" stroke={foreground} strokeOpacity="0.42" strokeWidth="0.7" />
         </g>
       ) : (
-        <path
-          d={`M -5 ${18 + artwork.stripeOffset} Q 20 55 45 25 T 105 ${30 + artwork.stripeOffset / 2}`}
-          fill="none"
-          opacity="0.22"
-          stroke="white"
-          strokeWidth="2"
-        />
+        <g transform={`rotate(${artwork.rotation} 50 31.25)`}>
+          <path d="M23 8 L63 14 L77 52 L37 46 Z" fill={accent} fillOpacity="0.32" />
+          <path d="M31 5 L69 18 L70 55 L32 42 Z" fill="none" stroke={foreground} strokeOpacity="0.48" strokeWidth="0.75" />
+        </g>
       )}
-      <rect y="39" width="100" height="23.5" fill="black" opacity="0.18" />
+
+      <path
+        d="M8 54 H28"
+        fill="none"
+        stroke={foreground}
+        strokeOpacity="0.5"
+        strokeWidth="0.7"
+      />
+      <circle cx="31" cy="54" r="1" fill={accent} opacity="0.85" />
+      <path
+        d="M73 9 H92"
+        fill="none"
+        stroke={foreground}
+        strokeOpacity="0.22"
+        strokeWidth="0.55"
+      />
+      <rect y="41" width="100" height="21.5" fill={background} opacity="0.22" />
     </svg>
   );
 }
@@ -207,7 +230,7 @@ export function ProjectArtwork({
       ) : (
         <GeneratedArtwork seed={`${projectId ?? "project"}:${name}:${daw}`} />
       )}
-      <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(90deg,transparent_49%,rgba(255,255,255,.15)_50%,transparent_51%)] [background-size:12px_100%]" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-white/[0.025]" />
       <AudioWaveform
         className={[
           "absolute text-white/45",

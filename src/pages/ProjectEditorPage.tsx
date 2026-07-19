@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { ProjectArtwork } from "../features/projects/ProjectArtwork";
+import { Select } from "../components/ui/Select";
 import {
   clearProjectAssetFolder, clearProjectCover, getProject, getProjectFacets, openProjectAssetFolder,
   renameProjectFile, selectProjectAssetFolder, selectProjectCover, updateProject,
@@ -15,6 +16,18 @@ import type { ProjectDetail, ProjectFacets, ProjectFolderCategory, UpdateProject
 import { errorMessage } from "../utils/errors";
 
 const emptyFacets: ProjectFacets = { daws: [], extensions: [], statuses: [], genres: [], tags: [] };
+const customGenreValue = "__custom_genre__";
+const predefinedGenres = [
+  "Afrobeat", "Amapiano", "Ambient", "Bachata", "Bolero", "Boom Bap",
+  "Breakbeat", "Cinematic", "Corridos tumbados", "Cumbia", "Dancehall",
+  "Deep House", "Dembow", "Disco", "Drill", "Drum and Bass", "Dubstep",
+  "EDM", "Electro", "Folk", "Funk", "Future Bass", "Future House",
+  "Hip Hop", "House", "Hyperpop", "Indie", "Jazz", "Jersey Club", "Latin",
+  "Lo-fi", "Merengue", "Metal", "Moombahton", "Phonk", "Pop",
+  "Progressive House", "Psytrance", "R&B", "Reggae", "Reggaetón",
+  "Regional mexicano", "Rock", "Salsa", "Soul", "Synthwave", "Tech House",
+  "Techno", "Trance", "Trap",
+];
 
 export function ProjectEditorPage() {
   const projectId = Number(useParams().projectId);
@@ -25,6 +38,7 @@ export function ProjectEditorPage() {
   const [form, setForm] = useState<UpdateProjectInput | null>(null);
   const [tagText, setTagText] = useState("");
   const [renameStem, setRenameStem] = useState("");
+  const [usesCustomGenre, setUsesCustomGenre] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -36,6 +50,7 @@ export function ProjectEditorPage() {
       notes: value.notes, tags: value.tags,
     });
     setTagText(value.tags.join(", "));
+    setUsesCustomGenre(false);
     setRenameStem(value.originalName.toLowerCase().endsWith(value.extension.toLowerCase())
       ? value.originalName.slice(0, -value.extension.length) : value.originalName);
   }, []);
@@ -48,6 +63,14 @@ export function ProjectEditorPage() {
   }, [applyProject, projectId]);
 
   const tags = useMemo(() => tagText.split(",").map((tag) => tag.trim()).filter(Boolean), [tagText]);
+  const genreOptions = useMemo(() => {
+    const currentGenre = form?.genre?.trim();
+    return [...new Set([
+      ...predefinedGenres,
+      ...facets.genres,
+      ...(currentGenre && !usesCustomGenre ? [currentGenre] : []),
+    ])].sort((left, right) => left.localeCompare(right, "es", { sensitivity: "base" }));
+  }, [facets.genres, form?.genre, usesCustomGenre]);
   const patchForm = (patch: Partial<UpdateProjectInput>) => setForm((current) => current ? { ...current, ...patch } : current);
 
   const save = async (event: React.FormEvent) => {
@@ -145,9 +168,35 @@ export function ProjectEditorPage() {
             <Field label="Nombre visual" wide><input required maxLength={200} value={form.displayName} onChange={(e) => patchForm({ displayName: e.currentTarget.value })} className={inputClass} /></Field>
             <Field label="BPM"><input type="number" min="1" max="999" step="0.01" value={form.bpm ?? ""} onChange={(e) => patchForm({ bpm: e.currentTarget.value ? Number(e.currentTarget.value) : null })} className={inputClass} /></Field>
             <Field label="Tonalidad"><input maxLength={32} value={form.musicalKey ?? ""} onChange={(e) => patchForm({ musicalKey: e.currentTarget.value || null })} placeholder="F#m" className={inputClass} /></Field>
-            <Field label="Género"><input list="genre-options" maxLength={100} value={form.genre ?? ""} onChange={(e) => patchForm({ genre: e.currentTarget.value || null })} className={inputClass} /><datalist id="genre-options">{facets.genres.map((genre) => <option key={genre} value={genre} />)}</datalist></Field>
-            <Field label="Estado"><select required value={form.status} onChange={(e) => patchForm({ status: e.currentTarget.value })} className={inputClass}>{facets.statuses.map((status) => <option key={status.key} value={status.key}>{status.label}</option>)}</select></Field>
-            <Field label="Calificación"><select value={form.rating ?? ""} onChange={(e) => patchForm({ rating: e.currentTarget.value ? Number(e.currentTarget.value) : null })} className={inputClass}><option value="">Sin calificar</option>{[0,1,2,3,4,5].map((rating) => <option key={rating} value={rating}>{rating} / 5</option>)}</select></Field>
+            <Field label="Género">
+              <Select
+                ariaLabel="Género"
+                value={usesCustomGenre ? customGenreValue : form.genre ?? ""}
+                onChange={(value) => {
+                  setUsesCustomGenre(value === customGenreValue);
+                  patchForm({ genre: value && value !== customGenreValue ? value : null });
+                }}
+                options={[
+                  { value: "", label: "Sin género" },
+                  ...genreOptions.map((genre) => ({ value: genre, label: genre })),
+                  { value: customGenreValue, label: "Otro…" },
+                ]}
+                searchable
+                searchPlaceholder="Buscar género…"
+              />
+              {usesCustomGenre ? (
+                <input
+                  autoFocus
+                  maxLength={100}
+                  value={form.genre ?? ""}
+                  onChange={(event) => patchForm({ genre: event.currentTarget.value || null })}
+                  placeholder="Escribe un género"
+                  className={inputClass + " mt-2"}
+                />
+              ) : null}
+            </Field>
+            <Field label="Estado"><Select ariaLabel="Estado" value={form.status} onChange={(value) => patchForm({ status: value })} options={facets.statuses.map((status) => ({ value: status.key, label: status.label }))} /></Field>
+            <Field label="Calificación"><Select ariaLabel="Calificación" value={form.rating?.toString() ?? ""} onChange={(value) => patchForm({ rating: value ? Number(value) : null })} options={[{ value: "", label: "Sin calificar" }, ...[0,1,2,3,4,5].map((rating) => ({ value: rating.toString(), label: `${rating} / 5` }))]} /></Field>
             <Field label="Etiquetas separadas por comas" wide><input value={tagText} onChange={(e) => setTagText(e.currentTarget.value)} placeholder="cliente, urgente, house" className={inputClass} /><p className="mt-1 text-[0.62rem] text-stone-600">Hasta 20 etiquetas de 40 caracteres.</p></Field>
             <Field label="Notas" wide><textarea rows={7} maxLength={10000} value={form.notes ?? ""} onChange={(e) => patchForm({ notes: e.currentTarget.value || null })} className={inputClass + " min-h-36 py-3"} /></Field>
           </section>
