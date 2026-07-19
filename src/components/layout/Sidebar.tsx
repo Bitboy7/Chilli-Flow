@@ -101,9 +101,9 @@ export function Sidebar() {
           <div className="mb-2 rounded-xl border border-white/[0.06] bg-white/[0.025] px-3 py-2.5">
             <div className="flex items-center gap-2 text-xs text-stone-400">
               <span className="size-1.5 rounded-full bg-lime-400" />
-              Arquitectura base
+              MVP local
             </div>
-            <p className="mt-1 text-[0.65rem] text-stone-600">Fase 1 de 6</p>
+            <p className="mt-1 text-[0.65rem] text-stone-600">MVP · 6 de 6</p>
           </div>
         )}
         <button

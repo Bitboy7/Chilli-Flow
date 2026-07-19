@@ -27,6 +27,7 @@ export function useScanEvents() {
         useScanStore.getState().receiveFinished(payload);
         void useFoldersStore.getState().load();
         window.dispatchEvent(new CustomEvent("chilli:library-changed"));
+        window.dispatchEvent(new CustomEvent("chilli:scan-history-changed"));
 
         const push = useToastStore.getState().push;
         if (payload.status === "failed") {
@@ -45,7 +46,7 @@ export function useScanEvents() {
           push({
             kind: "success",
             title: "Escaneo completado",
-            description: `${payload.projectsCreated} nuevos · ${payload.projectsUpdated} actualizados`,
+            description: `${payload.projectsCreated} nuevos · ${payload.projectsUpdated} actualizados · ${payload.projectsMoved} movidos`,
           });
         }
       }),

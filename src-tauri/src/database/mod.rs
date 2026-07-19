@@ -34,6 +34,7 @@ impl Database {
         let mut connection = Connection::open(&path)?;
         configure_connection(&connection)?;
         migrations::run(&mut connection)?;
+        recover_interrupted_scans(&connection)?;
 
         Ok(Self {
             connection: Mutex::new(connection),
@@ -48,6 +49,18 @@ impl Database {
     pub fn path(&self) -> &Path {
         &self.path
     }
+}
+
+fn recover_interrupted_scans(connection: &Connection) -> AppResult<()> {
+    connection.execute(
+        "UPDATE scan_history
+         SET status = 'failed',
+             finished_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+             error_message = COALESCE(error_message, 'La aplicación se cerró antes de terminar el escaneo')
+         WHERE status = 'running'",
+        [],
+    )?;
+    Ok(())
 }
 
 pub(crate) fn configure_connection(connection: &Connection) -> AppResult<()> {
@@ -77,7 +90,7 @@ mod tests {
             .query_row("SELECT COUNT(*) FROM project_statuses", [], |row| row.get(0))
             .expect("status count");
 
-        assert_eq!(schema_version, 1);
+        assert_eq!(schema_version, 4);
         assert_eq!(statuses, 8);
     }
 
@@ -98,5 +111,32 @@ mod tests {
 
         assert_eq!(insert().expect("first project"), 1);
         assert!(insert().is_err());
+    }
+
+    #[test]
+    fn recovers_scan_rows_left_running_by_an_interrupted_process() {
+        let mut connection = Connection::open_in_memory().expect("in-memory database");
+        configure_connection(&connection).expect("configure connection");
+        migrations::run(&mut connection).expect("run migrations");
+        connection
+            .execute(
+                "INSERT INTO scan_history (folder_path, started_at, status)
+                 VALUES ('C:/Music', '2026-07-19T00:00:00Z', 'running')",
+                [],
+            )
+            .expect("running scan");
+
+        recover_interrupted_scans(&connection).expect("recover scans");
+
+        let (status, finished_at, message): (String, Option<String>, Option<String>) = connection
+            .query_row(
+                "SELECT status, finished_at, error_message FROM scan_history",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .expect("recovered scan");
+        assert_eq!(status, "failed");
+        assert!(finished_at.is_some());
+        assert!(message.is_some());
     }
 }

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Outlet } from "react-router-dom";
 
 import { useScanEvents } from "../../hooks/use-scan-events";
@@ -16,7 +17,7 @@ export function AppShell() {
         <TopBar />
         <ScanProgressBar />
         <main className="min-h-0 flex-1 overflow-y-auto">
-          <Outlet />
+          <Suspense fallback={<div className="grid min-h-80 place-items-center text-sm text-stone-600">Cargando vista…</div>}><Outlet /></Suspense>
         </main>
       </div>
       <Toaster />

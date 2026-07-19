@@ -60,6 +60,7 @@ describe("scan store", () => {
       projectsFound: 5,
       projectsCreated: 4,
       projectsUpdated: 1,
+      projectsMoved: 0,
       projectsMarkedMissing: 0,
       errorMessage: null,
     });

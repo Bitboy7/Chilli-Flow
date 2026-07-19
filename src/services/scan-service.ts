@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 
-import type { ScanSession } from "../types/scanning";
+import type { ScanHistoryPage, ScanSession } from "../types/scanning";
 
 export function startScan(folderId?: number): Promise<ScanSession> {
   return invoke<ScanSession>("start_scan", {
@@ -10,4 +10,8 @@ export function startScan(folderId?: number): Promise<ScanSession> {
 
 export function cancelScan(sessionId: number): Promise<void> {
   return invoke("cancel_scan", { sessionId });
+}
+
+export function getScanHistory(page: number, pageSize = 20): Promise<ScanHistoryPage> {
+  return invoke<ScanHistoryPage>("get_scan_history", { page, pageSize });
 }

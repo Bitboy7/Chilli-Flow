@@ -2,7 +2,12 @@ use rusqlite::{params, Connection};
 
 use crate::errors::AppResult;
 
-const MIGRATIONS: &[(i64, &str)] = &[(1, include_str!("migrations/0001_initial.sql"))];
+const MIGRATIONS: &[(i64, &str)] = &[
+    (1, include_str!("migrations/0001_initial.sql")),
+    (2, include_str!("migrations/0002_library_indexes.sql")),
+    (3, include_str!("migrations/0003_scan_history_metrics.sql")),
+    (4, include_str!("migrations/0004_project_folder_paths.sql")),
+];
 
 pub fn run(connection: &mut Connection) -> AppResult<()> {
     connection.execute_batch(

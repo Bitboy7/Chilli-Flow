@@ -1,8 +1,8 @@
 use tauri::{AppHandle, State};
 
 use crate::{
-    models::ScanSession,
-    services::ScanService,
+    models::{ScanHistoryPage, ScanSession},
+    services::{ScanHistoryService, ScanService},
     state::AppState,
 };
 
@@ -14,6 +14,13 @@ pub fn start_scan(
 ) -> Result<ScanSession, String> {
     ScanService::start(&app, &state, folder_id)
         .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn get_scan_history(
+    state: State<'_, AppState>, page: u32, page_size: u32,
+) -> Result<ScanHistoryPage, String> {
+    ScanHistoryService::page(&state, page, page_size).map_err(|error| error.to_string())
 }
 
 #[tauri::command]

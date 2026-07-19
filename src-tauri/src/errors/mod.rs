@@ -32,4 +32,22 @@ pub enum AppError {
     ScanNotFound,
     #[error("Ya hay un escaneo en curso")]
     ScanAlreadyRunning,
+    #[error("El proyecto solicitado no existe")]
+    ProjectNotFound,
+    #[error("Datos del proyecto no válidos: {0}")]
+    InvalidProject(String),
+    #[error("La ruta del proyecto no pertenece a una carpeta supervisada")]
+    UnauthorizedProjectPath,
+    #[error("No se pudo completar la operación de archivo: {0}")]
+    FileOperation(#[source] std::io::Error),
+    #[error("La imagen seleccionada no tiene un formato compatible")]
+    UnsupportedImage,
+    #[error("La portada supera el límite de 12 MB")]
+    CoverTooLarge,
+    #[error("No se pudo procesar la portada: {0}")]
+    ImageProcessing(String),
+    #[error("El archivo asociado solicitado no existe")]
+    AssociatedFileNotFound,
+    #[error("El archivo seleccionado no es un audio compatible con el preview")]
+    UnsupportedAudio,
 }

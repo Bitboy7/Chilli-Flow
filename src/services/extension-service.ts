@@ -6,6 +6,7 @@ export function getExtensionCatalog(): Promise<ExtensionCatalogItem[]> {
   return invoke<ExtensionCatalogItem[]>("get_extension_catalog");
 }
 
+
 export function addCustomExtension(
   extension: string,
   dawName: string,

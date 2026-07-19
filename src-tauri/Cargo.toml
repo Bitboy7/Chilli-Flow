@@ -18,13 +18,15 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["protocol-asset"] }
 rusqlite = { version = "0.37", features = ["bundled"] }
 serde = { version = "1", features = ["derive"] }
 tauri-plugin-dialog = "2.7.2"
 thiserror = "2"
 walkdir = "2.5.0"
 dunce = "1.0.5"
+base64 = "0.22.1"
+image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "webp", "gif"] }
 
 [dev-dependencies]
 tempfile = "3.27.0"

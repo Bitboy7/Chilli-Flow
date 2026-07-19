@@ -6,6 +6,7 @@ import {
   Search,
   SlidersHorizontal,
 } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 
 import { useFoldersStore } from "../../stores/folders-store";
@@ -52,11 +53,34 @@ export function TopBar() {
   const { pathname } = useLocation();
   const libraryView = useUiStore((state) => state.libraryView);
   const setLibraryView = useUiStore((state) => state.setLibraryView);
+  const searchQuery = useUiStore((state) => state.searchQuery);
+  const setSearchQuery = useUiStore((state) => state.setSearchQuery);
+  const isFiltersOpen = useUiStore((state) => state.isFiltersOpen);
+  const toggleFilters = useUiStore((state) => state.toggleFilters);
   const addSelectedFolder = useFoldersStore((state) => state.addSelected);
   const isScanning = useScanStore((state) => state.isScanning);
   const startScan = useScanStore((state) => state.start);
   const pushToast = useToastStore((state) => state.push);
   const pageTitle = pageTitles[pathname] ?? "Chilli Beat";
+  const searchInput = useRef<HTMLInputElement>(null);
+  const isProjectRoute = [
+    "/library",
+    "/favorites",
+    "/recent",
+    "/daws",
+    "/statuses",
+  ].includes(pathname);
+
+  useEffect(() => {
+    const focusSearch = (event: KeyboardEvent) => {
+      if (isProjectRoute && (event.ctrlKey || event.metaKey) && event.key === "k") {
+        event.preventDefault();
+        searchInput.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", focusSearch);
+    return () => window.removeEventListener("keydown", focusSearch);
+  }, [isProjectRoute]);
 
   const handleScan = async () => {
     try {
@@ -103,9 +127,14 @@ export function TopBar() {
       <label className="order-3 flex h-10 w-full items-center gap-2.5 rounded-xl border border-white/[0.07] bg-black/20 px-3 text-stone-600 lg:order-none lg:max-w-sm">
         <Search className="size-4 shrink-0" />
         <input
+          ref={searchInput}
           type="search"
-          disabled
-          placeholder="Buscar proyectos · Fase 3"
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.currentTarget.value)}
+          disabled={!isProjectRoute}
+          placeholder={
+            isProjectRoute ? "Buscar por nombre…" : "Buscar proyectos"
+          }
           className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-stone-600 disabled:cursor-not-allowed"
         />
         <kbd className="hidden rounded border border-white/10 px-1.5 py-0.5 text-[0.6rem] text-stone-600 xl:block">
@@ -115,9 +144,15 @@ export function TopBar() {
 
       <button
         type="button"
-        disabled
-        title="Disponible en la Fase 3"
-        className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/[0.07] px-3 text-xs text-stone-500 disabled:cursor-not-allowed disabled:opacity-70"
+        onClick={toggleFilters}
+        disabled={!isProjectRoute}
+        title="Mostrar u ocultar filtros"
+        className={[
+          "inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-xs transition disabled:cursor-not-allowed disabled:opacity-40",
+          isFiltersOpen && isProjectRoute
+            ? "border-orange-400/20 bg-orange-400/10 text-orange-200"
+            : "border-white/[0.07] text-stone-500 hover:bg-white/[0.04] hover:text-stone-200",
+        ].join(" ")}
       >
         <SlidersHorizontal className="size-3.5" />
         <span className="hidden xl:inline">Filtros</span>

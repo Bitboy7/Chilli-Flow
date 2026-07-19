@@ -13,7 +13,7 @@ use crate::{
     models::{ScanFinished, ScanProgress, ScanSession, WatchedFolder},
     platform::canonicalize_directory,
     repositories::{
-        CustomExtensionRepository, ProjectRepository, ScanHistoryRepository,
+        CustomExtensionRepository, ProjectRepository, ScanHistoryMetrics, ScanHistoryRepository,
         WatchedFolderRepository,
     },
     scanner::{scan_directory, DawCatalog},
@@ -62,6 +62,7 @@ impl ScanService {
                 projects_found: 0,
                 projects_created: 0,
                 projects_updated: 0,
+                projects_moved: 0,
                 projects_marked_missing: 0,
                 error_message: Some(error.to_string()),
             });
@@ -98,6 +99,7 @@ fn run_session(
         projects_found: 0,
         projects_created: 0,
         projects_updated: 0,
+        projects_moved: 0,
         projects_marked_missing: 0,
         error_message: None,
     };
@@ -125,10 +127,7 @@ fn run_session(
                     &connection,
                     history_id,
                     "failed",
-                    0,
-                    0,
-                    0,
-                    0,
+                    &ScanHistoryMetrics::default(),
                     Some(&message),
                 )?;
                 final_event.status = "failed".to_string();
@@ -157,6 +156,7 @@ fn run_session(
 
         let was_cancelled =
             outcome.was_cancelled || cancellation.load(Ordering::Relaxed);
+        let can_reconcile = can_reconcile_scan(was_cancelled, outcome.unreadable_entries);
         let warning = (outcome.unreadable_entries > 0).then(|| {
             format!(
                 "{} elementos no se pudieron leer",
@@ -175,16 +175,19 @@ fn run_session(
         let persistence = || -> AppResult<_> {
             let state = app.state::<AppState>();
             let mut connection = state.database().connection()?;
+            let moved = if can_reconcile {
+                ProjectRepository::reconcile_moved_in_folder(
+                    &mut connection, &canonical_folder, &outcome.projects, &discovered_paths,
+                )?
+            } else { 0 };
             let upsert = ProjectRepository::upsert_batch(&mut connection, &outcome.projects)?;
-            let marked_missing = if was_cancelled {
-                0
-            } else {
+            let marked_missing = if can_reconcile {
                 ProjectRepository::mark_missing_in_folder(
                     &mut connection,
                     &canonical_folder,
                     &discovered_paths,
                 )?
-            };
+            } else { 0 };
             if !was_cancelled {
                 WatchedFolderRepository::touch_scanned(&connection, folder.id)?;
             }
@@ -196,15 +199,20 @@ fn run_session(
                 } else {
                     "completed"
                 },
-                outcome.files_scanned,
-                outcome.projects_found(),
-                upsert.created,
-                upsert.updated,
+                &ScanHistoryMetrics {
+                    files_scanned: outcome.files_scanned,
+                    projects_found: outcome.projects_found(),
+                    projects_created: upsert.created,
+                    projects_updated: upsert.updated,
+                    projects_moved: moved,
+                    projects_marked_missing: marked_missing,
+                    unreadable_entries: outcome.unreadable_entries,
+                },
                 warning.as_deref(),
             )?;
-            Ok((upsert, marked_missing))
+            Ok((upsert, moved, marked_missing))
         };
-        let (upsert, marked_missing) = match persistence() {
+        let (upsert, moved, marked_missing) = match persistence() {
             Ok(result) => result,
             Err(error) => {
                 let message = error.to_string();
@@ -214,10 +222,12 @@ fn run_session(
                         &connection,
                         history_id,
                         "failed",
-                        outcome.files_scanned,
-                        outcome.projects_found(),
-                        0,
-                        0,
+                        &ScanHistoryMetrics {
+                            files_scanned: outcome.files_scanned,
+                            projects_found: outcome.projects_found(),
+                            unreadable_entries: outcome.unreadable_entries,
+                            ..ScanHistoryMetrics::default()
+                        },
                         Some(&message),
                     );
                 }
@@ -229,6 +239,7 @@ fn run_session(
 
         final_event.projects_created += upsert.created;
         final_event.projects_updated += upsert.updated;
+        final_event.projects_moved += moved;
         final_event.projects_marked_missing += marked_missing;
         if warning.is_some() {
             final_event.error_message = warning;
@@ -241,4 +252,20 @@ fn run_session(
     }
 
     Ok(final_event)
+}
+
+fn can_reconcile_scan(was_cancelled: bool, unreadable_entries: u64) -> bool {
+    !was_cancelled && unreadable_entries == 0
+}
+
+#[cfg(test)]
+mod tests {
+    use super::can_reconcile_scan;
+
+    #[test]
+    fn reconciles_only_after_a_complete_fully_readable_walk() {
+        assert!(can_reconcile_scan(false, 0));
+        assert!(!can_reconcile_scan(true, 0));
+        assert!(!can_reconcile_scan(false, 1));
+    }
 }

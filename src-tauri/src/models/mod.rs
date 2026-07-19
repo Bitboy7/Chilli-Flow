@@ -1,11 +1,20 @@
 mod app_status;
 mod custom_extension;
 mod project;
+mod project_detail;
+mod project_file;
+mod project_query;
 mod scan;
 mod watched_folder;
 
 pub use app_status::AppStatus;
 pub use custom_extension::{CustomExtension, ExtensionCatalogItem};
 pub use project::DiscoveredProject;
-pub use scan::{ScanFinished, ScanProgress, ScanSession};
+pub use project_detail::{CoverAsset, ProjectDetail, ProjectFolderCategory, ProjectFolderPaths, UpdateProjectInput};
+pub use project_file::{ProjectFile, ProjectFileCategory};
+pub use project_query::{
+    ProjectFacets, ProjectListItem, ProjectPage, ProjectQuery, ProjectSort,
+    ProjectStatusFacet, ProjectTagFacet, SortDirection,
+};
+pub use scan::{ScanFinished, ScanHistoryEntry, ScanHistoryPage, ScanProgress, ScanSession};
 pub use watched_folder::WatchedFolder;
