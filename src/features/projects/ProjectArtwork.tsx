@@ -6,6 +6,115 @@ import { getProjectCover } from "../../services/project-service";
 const coverCache = new Map<number, { path: string; dataUrl: string }>();
 const MAX_CACHED_COVERS = 128;
 
+type GeneratedArtworkData = {
+  accentHue: number;
+  baseHue: number;
+  circles: Array<{ opacity: number; radius: number; x: number; y: number }>;
+  rotation: number;
+  stripeOffset: number;
+  variant: number;
+};
+
+function hashSeed(value: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function seededRandom(seed: number) {
+  let state = seed >>> 0;
+  return () => {
+    state += 0x6d2b79f5;
+    let value = state;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function generateArtworkData(seed: string): GeneratedArtworkData {
+  const random = seededRandom(hashSeed(seed));
+  const baseHue = Math.floor(random() * 360);
+  return {
+    baseHue,
+    accentHue: (baseHue + 35 + Math.floor(random() * 105)) % 360,
+    circles: Array.from({ length: 6 }, () => ({
+      x: random() * 100,
+      y: random() * 62.5,
+      radius: 8 + random() * 24,
+      opacity: 0.05 + random() * 0.13,
+    })),
+    rotation: -28 + random() * 56,
+    stripeOffset: random() * 18,
+    variant: Math.floor(random() * 3),
+  };
+}
+
+function GeneratedArtwork({ seed }: { seed: string }) {
+  const artwork = generateArtworkData(seed);
+  const gradientId = `project-artwork-${hashSeed(seed)}`;
+
+  return (
+    <svg
+      aria-hidden="true"
+      className="absolute inset-0 size-full"
+      preserveAspectRatio="xMidYMid slice"
+      viewBox="0 0 100 62.5"
+    >
+      <defs>
+        <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor={`hsl(${artwork.baseHue} 72% 38%)`} />
+          <stop offset="55%" stopColor={`hsl(${artwork.accentHue} 62% 24%)`} />
+          <stop offset="100%" stopColor={`hsl(${artwork.baseHue} 38% 7%)`} />
+        </linearGradient>
+      </defs>
+
+      <rect width="100" height="62.5" fill={`url(#${gradientId})`} />
+      {artwork.circles.map((circle, index) => (
+        <circle
+          key={index}
+          cx={circle.x}
+          cy={circle.y}
+          r={circle.radius}
+          fill="white"
+          opacity={circle.opacity}
+        />
+      ))}
+
+      {artwork.variant === 0 ? (
+        <g
+          opacity="0.16"
+          stroke="white"
+          strokeWidth="2.2"
+          transform={`rotate(${artwork.rotation} 50 31.25)`}
+        >
+          {Array.from({ length: 7 }, (_, index) => (
+            <line key={index} x1={-15 + index * 18 + artwork.stripeOffset} y1="-10" x2={-15 + index * 18 + artwork.stripeOffset} y2="73" />
+          ))}
+        </g>
+      ) : artwork.variant === 1 ? (
+        <g fill="none" stroke="white" opacity="0.2">
+          <circle cx="50" cy="31.25" r="10" />
+          <circle cx="50" cy="31.25" r="20" />
+          <circle cx="50" cy="31.25" r="30" />
+        </g>
+      ) : (
+        <path
+          d={`M -5 ${18 + artwork.stripeOffset} Q 20 55 45 25 T 105 ${30 + artwork.stripeOffset / 2}`}
+          fill="none"
+          opacity="0.22"
+          stroke="white"
+          strokeWidth="2"
+        />
+      )}
+      <rect y="39" width="100" height="23.5" fill="black" opacity="0.18" />
+    </svg>
+  );
+}
+
 function cacheCover(projectId: number, path: string, dataUrl: string) {
   coverCache.delete(projectId);
   coverCache.set(projectId, { path, dataUrl });
@@ -91,11 +200,13 @@ export function ProjectArtwork({
         compact ? "size-10 rounded-lg" : "aspect-[16/10] w-full",
       ].join(" ")}
       role="img"
-      aria-label={"Portada provisional de " + name}
+      aria-label={(cover ? "Portada de " : "Portada generada de ") + name}
     >
       {cover ? (
         <img src={cover} alt={"Portada de " + name} loading="lazy" className="absolute inset-0 size-full object-cover" />
-      ) : null}
+      ) : (
+        <GeneratedArtwork seed={`${projectId ?? "project"}:${name}:${daw}`} />
+      )}
       <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(90deg,transparent_49%,rgba(255,255,255,.15)_50%,transparent_51%)] [background-size:12px_100%]" />
       <AudioWaveform
         className={[
