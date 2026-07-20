@@ -6,6 +6,7 @@ import {
   Heart,
   History,
   LibraryBig,
+  ListChecks,
   Settings2,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -19,6 +20,7 @@ export interface NavigationItem {
 
 export const primaryNavigation: NavigationItem[] = [
   { label: "Biblioteca", to: "/library", icon: LibraryBig, end: true },
+  { label: "Terminar", to: "/finish", icon: ListChecks },
   { label: "Favoritos", to: "/favorites", icon: Heart },
   { label: "Proyectos recientes", to: "/recent", icon: Clock3 },
   { label: "DAWs", to: "/daws", icon: AudioWaveform },
@@ -33,6 +35,7 @@ export const managementNavigation: NavigationItem[] = [
 
 export const pageTitles: Record<string, string> = {
   "/library": "Biblioteca",
+  "/finish": "Terminar canciones",
   "/favorites": "Favoritos",
   "/recent": "Proyectos recientes",
   "/daws": "DAWs",
