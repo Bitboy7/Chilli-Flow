@@ -22,6 +22,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::audio_analysis::analyze_project_audio,
             commands::app::get_app_status,
             commands::extensions::get_extension_catalog,
             commands::extensions::add_custom_extension,

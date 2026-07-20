@@ -1,6 +1,7 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 
 import type {
+  AudioAnalysis,
   CoverAsset,
   ProjectDetail,
   ProjectFacets,
@@ -83,6 +84,10 @@ export function openProjectFile(projectId: number, fileId: number): Promise<void
 
 export function setProjectPreview(projectId: number, fileId: number | null): Promise<void> {
   return invoke<void>("set_project_preview", { projectId, fileId });
+}
+
+export function analyzeProjectAudio(projectId: number, fileId: number): Promise<AudioAnalysis> {
+  return invoke<AudioAnalysis>("analyze_project_audio", { projectId, fileId });
 }
 
 export async function projectAudioUrl(projectId: number, fileId: number): Promise<string> {

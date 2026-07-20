@@ -6,3 +6,4 @@ pub mod projects;
 pub mod project_files;
 pub mod playback;
 pub mod scanning;
+pub mod audio_analysis;

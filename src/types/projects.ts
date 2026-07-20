@@ -118,3 +118,17 @@ export interface ProjectFile {
   createdAt: string;
   isMissing: boolean;
 }
+
+export interface AudioAnalysis {
+  fileId: number;
+  durationSeconds: number;
+  sampleRate: number;
+  bitDepth: number | null;
+  channels: number;
+  integratedLufs: number | null;
+  loudnessRangeLu: number | null;
+  truePeakDbfs: number | null;
+  waveform: number[];
+  analyzedAt: string;
+  fromCache: boolean;
+}

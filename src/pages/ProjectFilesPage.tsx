@@ -1,17 +1,17 @@
 import {
-  ExternalLink, FileAudio, FilePlus2, Files, ListPlus, LoaderCircle, Play, Trash2,
+  Activity, ExternalLink, FileAudio, FilePlus2, Files, ListPlus, LoaderCircle, Play, Trash2,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 
 import {
-  listProjectFiles, openProjectFile, playableTrack,
+  analyzeProjectAudio, listProjectFiles, openProjectFile, playableTrack,
   removeProjectFile, selectProjectFiles, setProjectPreview,
   setProjectFileCategory,
 } from "../services/project-service";
 import { usePlaybackStore } from "../stores/playback-store";
 import { useToastStore } from "../stores/toast-store";
-import type { ProjectFile, ProjectFileCategory } from "../types/projects";
+import type { AudioAnalysis, ProjectFile, ProjectFileCategory } from "../types/projects";
 import { errorMessage } from "../utils/errors";
 import type { ProjectWorkspaceContext } from "./ProjectWorkspacePage";
 
@@ -35,6 +35,8 @@ export function ProjectFilesPage() {
   const [previewId, setPreviewId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [analyzingId, setAnalyzingId] = useState<number | null>(null);
+  const [analyses, setAnalyses] = useState<Record<number, AudioAnalysis>>({});
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -98,6 +100,18 @@ export function ProjectFilesPage() {
     finally { setBusy(false); }
   };
 
+  const analyze = async (file: ProjectFile) => {
+    setAnalyzingId(file.id);
+    try {
+      const result = await analyzeProjectAudio(projectId, file.id);
+      setAnalyses((current) => ({ ...current, [file.id]: result }));
+    } catch (cause) {
+      pushToast({ kind: "error", title: "No se pudo analizar el audio", description: errorMessage(cause) });
+    } finally {
+      setAnalyzingId(null);
+    }
+  };
+
   if (isLoading) return <div className="grid min-h-64 place-items-center"><LoaderCircle className="size-6 animate-spin text-orange-300" /></div>;
   if (error) return <div className="mt-5 rounded-2xl border border-red-400/20 bg-red-400/[0.05] p-5 text-sm text-red-100/70">{error}</div>;
 
@@ -142,7 +156,7 @@ export function ProjectFilesPage() {
                 const canPlay = audioTypes.has(file.fileType.toLowerCase()) && !file.isMissing;
                 const track = canPlay ? playableTrack(project, file) : null;
                 return (
-                  <article key={file.id} className="flex items-center gap-3 bg-white/[0.015] px-4 py-3 hover:bg-white/[0.03]">
+                  <article key={file.id} className="flex flex-wrap items-center gap-3 bg-white/[0.015] px-4 py-3 hover:bg-white/[0.03]">
                     <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-white/[0.04]"><FileAudio className="size-4 text-stone-500" /></span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
@@ -155,6 +169,9 @@ export function ProjectFilesPage() {
                       <>
                         <button type="button" onClick={() => playTrack(track, playbackContext)} title="Reproducir" className="grid size-8 place-items-center rounded-lg text-stone-500 hover:bg-orange-400/10 hover:text-orange-300"><Play className="size-3.5 fill-current" /></button>
                         <button type="button" onClick={() => addToQueue(track)} title="Añadir a la cola" className="grid size-8 place-items-center rounded-lg text-stone-500 hover:bg-white/5 hover:text-stone-200"><ListPlus className="size-4" /></button>
+                        <button type="button" disabled={analyzingId !== null} onClick={() => void analyze(file)} title="Analizar audio" className="grid size-8 place-items-center rounded-lg text-stone-500 hover:bg-white/5 hover:text-stone-200 disabled:opacity-35">
+                          {analyzingId === file.id ? <LoaderCircle className="size-4 animate-spin text-orange-300" /> : <Activity className="size-4" />}
+                        </button>
                       </>
                     ) : null}
                     <select value={file.category} disabled={busy} onChange={(event) => void reclassify(file, event.currentTarget.value as ProjectFileCategory)} aria-label={"Categoría de " + file.fileName} className="h-8 rounded-lg border border-white/[0.07] bg-[#1b1917] px-2 text-[0.65rem] text-stone-400 outline-none">
@@ -162,6 +179,7 @@ export function ProjectFilesPage() {
                     </select>
                     <button type="button" disabled={file.isMissing || busy} onClick={() => void open(file)} title="Abrir archivo" className="grid size-8 place-items-center rounded-lg text-stone-600 hover:bg-white/5 hover:text-stone-300 disabled:opacity-30"><ExternalLink className="size-4" /></button>
                     <button type="button" disabled={busy} onClick={() => void remove(file)} title="Quitar asociación" className="grid size-8 place-items-center rounded-lg text-stone-600 hover:bg-red-400/10 hover:text-red-300 disabled:opacity-30"><Trash2 className="size-4" /></button>
+                    {analyses[file.id] ? <AudioMetrics analysis={analyses[file.id]} /> : null}
                   </article>
                 );
               })}
@@ -174,3 +192,27 @@ export function ProjectFilesPage() {
 }
 
 function formatBytes(bytes: number) { if (bytes < 1024) return bytes + " B"; if (bytes < 1024 ** 2) return (bytes / 1024).toFixed(1) + " KB"; if (bytes < 1024 ** 3) return (bytes / 1024 ** 2).toFixed(1) + " MB"; return (bytes / 1024 ** 3).toFixed(2) + " GB"; }
+
+function AudioMetrics({ analysis }: { analysis: AudioAnalysis }) {
+  const metrics = [
+    ["LUFS-I", formatMetric(analysis.integratedLufs, " LUFS")],
+    ["LRA", formatMetric(analysis.loudnessRangeLu, " LU")],
+    ["True peak", formatMetric(analysis.truePeakDbfs, " dBTP")],
+    ["Formato", analysis.sampleRate / 1000 + " kHz · " + (analysis.bitDepth ?? "—") + " bit"],
+    ["Canales", analysis.channels === 1 ? "Mono" : analysis.channels === 2 ? "Estéreo" : String(analysis.channels)],
+    ["Duración", formatDuration(analysis.durationSeconds)],
+  ];
+  return (
+    <div className="ml-12 grid basis-full gap-3 border-t border-white/[0.055] pt-3 sm:grid-cols-[minmax(12rem,1fr)_2fr]">
+      <div className="flex h-10 items-end gap-px overflow-hidden rounded-lg bg-black/15 px-2 py-1.5" aria-label="Forma de onda resumida">
+        {analysis.waveform.map((peak, index) => <span key={index} className="min-w-px flex-1 rounded-sm bg-orange-300/45" style={{ height: Math.max(8, peak * 100) + "%" }} />)}
+      </div>
+      <dl className="grid grid-cols-3 gap-x-4 gap-y-2">
+        {metrics.map(([label, value]) => <div key={label}><dt className="text-[0.55rem] uppercase tracking-wide text-stone-600">{label}</dt><dd className="mt-0.5 text-[0.68rem] text-stone-300">{value}</dd></div>)}
+      </dl>
+    </div>
+  );
+}
+
+function formatMetric(value: number | null, suffix: string) { return value === null ? "—" : value.toFixed(1) + suffix; }
+function formatDuration(seconds: number) { return Math.floor(seconds / 60) + ":" + Math.floor(seconds % 60).toString().padStart(2, "0"); }

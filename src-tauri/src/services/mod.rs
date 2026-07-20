@@ -17,3 +17,5 @@ pub use project_file_service::ProjectFileService;
 pub use playback_service::PlaybackService;
 pub use scan_service::ScanService;
 pub use scan_history_service::ScanHistoryService;
+mod audio_analysis_service;
+pub use audio_analysis_service::AudioAnalysisService;

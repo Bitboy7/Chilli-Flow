@@ -16,12 +16,6 @@ pub enum RepeatMode {
     One,
 }
 
-impl Default for RepeatMode {
-    fn default() -> Self {
-        Self::Off
-    }
-}
-
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlaybackSessionInput {

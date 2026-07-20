@@ -17,3 +17,5 @@ pub use project_query_repository::ProjectQueryRepository;
 pub use playback_repository::PlaybackRepository;
 pub use scan_history_repository::{ScanHistoryMetrics, ScanHistoryRepository};
 pub use watched_folder_repository::WatchedFolderRepository;
+mod audio_analysis_repository;
+pub use audio_analysis_repository::AudioAnalysisRepository;

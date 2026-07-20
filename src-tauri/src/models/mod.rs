@@ -1,3 +1,4 @@
+mod audio_analysis;
 mod app_status;
 mod custom_extension;
 mod project;
@@ -22,3 +23,4 @@ pub use playback::{
 };
 pub use scan::{ScanFinished, ScanHistoryEntry, ScanHistoryPage, ScanProgress, ScanSession};
 pub use watched_folder::WatchedFolder;
+pub use audio_analysis::{AudioAnalysis, CachedAudioAnalysis};

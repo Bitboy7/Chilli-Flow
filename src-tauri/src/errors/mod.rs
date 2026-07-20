@@ -50,6 +50,8 @@ pub enum AppError {
     AssociatedFileNotFound,
     #[error("El archivo seleccionado no es un audio compatible con el preview")]
     UnsupportedAudio,
+    #[error("No se pudo analizar el audio: {0}")]
+    AudioAnalysis(String),
     #[error("Estado del reproductor no válido: {0}")]
     InvalidPlaybackSession(String),
     #[error("No se pudo serializar el estado local: {0}")]
