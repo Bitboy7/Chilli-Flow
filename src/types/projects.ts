@@ -140,6 +140,15 @@ export interface ProjectFile {
   fileSize: number;
   createdAt: string;
   isMissing: boolean;
+  origin: "manual" | "discovered";
+  sourceLabel: string | null;
+  relativePath: string | null;
+}
+
+export interface SyncProjectFilesResult {
+  files: ProjectFile[];
+  discoveredCount: number;
+  scannedFolders: number;
 }
 
 export interface AudioAnalysis {

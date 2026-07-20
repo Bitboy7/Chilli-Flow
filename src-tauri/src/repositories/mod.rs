@@ -15,7 +15,7 @@ pub use handoff_repository::HandoffRepository;
 pub use library_repository::LibraryRepository;
 pub use project_repository::ProjectRepository;
 pub use project_detail_repository::ProjectDetailRepository;
-pub use project_file_repository::{NewProjectFile, ProjectFileRepository};
+pub use project_file_repository::{DiscoveredProjectFile, NewProjectFile, ProjectFileRepository};
 pub use project_query_repository::ProjectQueryRepository;
 pub use project_version_repository::ProjectVersionRepository;
 pub use playback_repository::PlaybackRepository;

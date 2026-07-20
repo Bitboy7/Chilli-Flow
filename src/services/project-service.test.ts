@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   openProjectAssetFolder, projectAudioUrl, removeProjectFile, renameProjectFile,
-  setProjectFavorite, setProjectFileCategory, setProjectPreview, updateProject,
+  setProjectFavorite, setProjectFileCategory, setProjectPreview, syncProjectFiles, updateProject,
 } from "./project-service";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(), convertFileSrc: vi.fn((path: string) => "asset:" + path) }));
@@ -69,5 +69,11 @@ describe("project service command contracts", () => {
     expect(invoke).toHaveBeenCalledWith("set_project_file_category", {
       projectId: 7, fileId: 12, category: "master",
     });
+  });
+
+  it("syncs project assets using only the stored project ID", async () => {
+    vi.mocked(invoke).mockResolvedValue({ files: [], discoveredCount: 0, scannedFolders: 3 });
+    await syncProjectFiles(7);
+    expect(invoke).toHaveBeenCalledWith("sync_project_files", { projectId: 7 });
   });
 });

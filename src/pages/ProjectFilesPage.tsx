@@ -1,14 +1,14 @@
 import {
-  Activity, Check, ExternalLink, FileAudio, FilePlus2, Files, FolderTree, ListPlus, LoaderCircle, Play, Trash2, X,
+  Activity, Check, ExternalLink, EyeOff, FileAudio, FilePlus2, Files, FolderSearch, FolderTree,
+  ListPlus, LoaderCircle, Play, RefreshCw, Trash2, X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 
 import {
-  analyzeProjectAudio, applyProjectFolderSetup, listProjectFiles, openProjectFile, playableTrack,
-  previewProjectFolderSetup,
-  removeProjectFile, selectProjectFiles, setProjectPreview,
-  setProjectFileCategory,
+  analyzeProjectAudio, applyProjectFolderSetup, openProjectFile, playableTrack,
+  previewProjectFolderSetup, removeProjectFile, selectProjectFiles, setProjectFileCategory,
+  setProjectPreview, syncProjectFiles,
 } from "../services/project-service";
 import { usePlaybackStore } from "../stores/playback-store";
 import { useToastStore } from "../stores/toast-store";
@@ -21,9 +21,11 @@ const categories: { value: ProjectFileCategory; label: string }[] = [
   { value: "master", label: "Master" }, { value: "preview", label: "Preview" },
   { value: "reference", label: "Reference" }, { value: "artwork", label: "Artwork" },
   { value: "midi", label: "MIDI" }, { value: "preset", label: "Preset" },
-  { value: "sample", label: "Sample" }, { value: "other", label: "Other" },
+  { value: "sample", label: "Audio del proyecto" }, { value: "other", label: "Otro" },
 ];
 const audioTypes = new Set(["wav", "mp3", "flac", "ogg"]);
+
+type FileGroup = { label: string; discovered: boolean; files: ProjectFile[] };
 
 export function ProjectFilesPage() {
   const { project, setProject } = useOutletContext<ProjectWorkspaceContext>();
@@ -36,6 +38,9 @@ export function ProjectFilesPage() {
   const [category, setCategory] = useState<ProjectFileCategory>("stem");
   const [previewId, setPreviewId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [scannedFolders, setScannedFolders] = useState(0);
+  const [lastDiscoveredCount, setLastDiscoveredCount] = useState(0);
   const [busy, setBusy] = useState(false);
   const [analyzingId, setAnalyzingId] = useState<number | null>(null);
   const [analyses, setAnalyses] = useState<Record<number, AudioAnalysis>>({});
@@ -44,20 +49,68 @@ export function ProjectFilesPage() {
   const [folderPlan, setFolderPlan] = useState<FolderSetupPlan | null>(null);
   const [folderBusy, setFolderBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const syncInFlight = useRef(false);
 
-  const load = useCallback(async () => {
+  const synchronize = useCallback(async (notify: boolean) => {
+    if (syncInFlight.current) return;
+    syncInFlight.current = true;
+    setIsSyncing(true);
     try {
-      const associated = await listProjectFiles(projectId);
-      setFiles(associated);
-      setPreviewId(associated.find((file) => file.filePath === project.previewPath)?.id ?? null);
+      const result = await syncProjectFiles(projectId);
+      setFiles(result.files);
+      setScannedFolders(result.scannedFolders);
+      setLastDiscoveredCount(result.discoveredCount);
+      setPreviewId((current) => {
+        if (!notify) return result.files.find((file) => file.filePath === project.previewPath)?.id ?? null;
+        return current !== null && result.files.some((file) => file.id === current) ? current : null;
+      });
       setError(null);
-    } catch (cause) { setError(errorMessage(cause)); }
-    finally { setIsLoading(false); }
-  }, [project.previewPath, projectId]);
+      if (notify && result.discoveredCount > 0) {
+        pushToast({
+          kind: "success",
+          title: result.discoveredCount === 1 ? "Nuevo audio encontrado" : "Nuevos audios encontrados",
+          description: `${result.discoveredCount} ${result.discoveredCount === 1 ? "archivo fue añadido" : "archivos fueron añadidos"} desde las carpetas del proyecto.`,
+        });
+      }
+    } catch (cause) {
+      const message = errorMessage(cause);
+      if (notify) {
+        pushToast({ kind: "error", title: "No se pudieron actualizar los archivos", description: message });
+      } else {
+        setError(message);
+      }
+    } finally {
+      syncInFlight.current = false;
+      setIsSyncing(false);
+      setIsLoading(false);
+    }
+  }, [project.previewPath, projectId, pushToast]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void synchronize(false); }, [synchronize]);
+  useEffect(() => {
+    const handleFocus = () => { void synchronize(true); };
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [synchronize]);
 
-  const audioFiles = useMemo(() => files.filter((file) => audioTypes.has(file.fileType.toLowerCase()) && !file.isMissing), [files]);
+  const audioFiles = useMemo(
+    () => files.filter((file) => audioTypes.has(file.fileType.toLowerCase()) && !file.isMissing),
+    [files],
+  );
+  const fileGroups = useMemo<FileGroup[]>(() => {
+    const groups = new Map<string, FileGroup>();
+    for (const file of files) {
+      const discovered = file.origin === "discovered";
+      const label = discovered ? file.sourceLabel ?? "Detectados automáticamente" : "Añadidos manualmente";
+      const group = groups.get(label) ?? { label, discovered, files: [] };
+      group.files.push(file);
+      groups.set(label, group);
+    }
+    return Array.from(groups.values()).sort((left, right) => {
+      if (left.discovered !== right.discovered) return left.discovered ? -1 : 1;
+      return left.label.localeCompare(right.label, "es");
+    });
+  }, [files]);
   const selectedPreview = files.find((file) => file.id === previewId) ?? null;
   const playbackContext = useMemo(
     () => audioFiles.map((file) => playableTrack(project, file)),
@@ -72,13 +125,21 @@ export function ProjectFilesPage() {
   };
 
   const remove = async (file: ProjectFile) => {
-    if (!window.confirm("¿Quitar \"" + file.fileName + "\" del proyecto? El archivo físico no se eliminará.")) return;
+    const isDiscovered = file.origin === "discovered";
+    const message = isDiscovered
+      ? `¿Ocultar "${file.fileName}"? No se eliminará del disco ni volverá a añadirse automáticamente.`
+      : `¿Quitar "${file.fileName}" del proyecto? El archivo físico no se eliminará.`;
+    if (!window.confirm(message)) return;
     setBusy(true);
     try {
       await removeProjectFile(projectId, file.id);
       if (previewId === file.id) setPreviewId(null);
       setFiles((current) => current.filter((item) => item.id !== file.id));
-      pushToast({ kind: "success", title: "Asociación eliminada", description: "El archivo físico permanece intacto." });
+      pushToast({
+        kind: "success",
+        title: isDiscovered ? "Archivo ocultado" : "Asociación eliminada",
+        description: isDiscovered ? "Chilli Beat respetará esta decisión en futuras actualizaciones." : "El archivo físico permanece intacto.",
+      });
     } catch (cause) { pushToast({ kind: "error", title: "No se pudo quitar el archivo", description: errorMessage(cause) }); }
     finally { setBusy(false); }
   };
@@ -140,6 +201,7 @@ export function ProjectFilesPage() {
       const updated = await applyProjectFolderSetup(projectId, folderPlan.token);
       setProject(updated);
       setFolderPlan(null);
+      await synchronize(true);
       pushToast({ kind: "success", title: "Estructura preparada", description: "Solo se crearon carpetas; no se movió ningún archivo." });
     } catch (cause) { pushToast({ kind: "error", title: "No se pudo crear la estructura", description: errorMessage(cause) }); }
     finally { setFolderBusy(false); }
@@ -150,109 +212,127 @@ export function ProjectFilesPage() {
 
   return (
     <div className="pt-5">
-      <header><p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-orange-400/70">Organización sin mover archivos</p><h2 className="mt-2 text-xl font-semibold text-stone-100">Audio y archivos</h2><p className="mt-2 text-sm text-stone-500">Las rutas se guardan en SQLite; Chilli Beat no copia, mueve ni elimina los originales.</p></header>
+      <header>
+        <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-orange-400/70">Organización sin mover archivos</p>
+        <h2 className="mt-2 text-xl font-semibold text-stone-100">Audio y archivos</h2>
+        <p className="mt-2 max-w-3xl text-sm text-stone-500">Chilli Beat busca audio dentro de las carpetas del proyecto y guarda únicamente sus rutas. Nunca copia, mueve ni elimina los originales.</p>
+      </header>
 
       <section className="mt-6">
-        <div className="mb-2 flex items-center justify-between"><h2 className="text-sm font-medium text-stone-300">Preview de audio</h2><select value={previewId ?? ""} disabled={busy} onChange={(e) => void choosePreview(e.currentTarget.value)} className="h-11 max-w-64 rounded-xl border border-white/[0.08] bg-[#1b1917] px-3 text-xs text-stone-300 outline-none"><option value="">Sin preview</option>{audioFiles.map((file) => <option key={file.id} value={file.id}>{file.fileName}</option>)}</select></div>
+        <div className="mb-2 flex items-center justify-between gap-4">
+          <h2 className="text-sm font-medium text-stone-300">Preview de audio</h2>
+          <select value={previewId ?? ""} disabled={busy} onChange={(event) => void choosePreview(event.currentTarget.value)} className="h-11 max-w-64 rounded-xl border border-white/[0.08] bg-[#1b1917] px-3 text-xs text-stone-300 outline-none">
+            <option value="">Sin preview</option>
+            {audioFiles.map((file) => <option key={file.id} value={file.id}>{file.fileName}</option>)}
+          </select>
+        </div>
         <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/[0.07] bg-white/[0.018] px-4 py-3">
           <div className="min-w-0">
             <p className="truncate text-sm text-stone-300">{selectedPreview?.fileName ?? "No hay preview seleccionado"}</p>
             <p className="mt-1 text-xs text-stone-500">La reproducción continúa mientras navegas por Chilli Beat.</p>
           </div>
-          <button
-            type="button"
-            disabled={!selectedPreview || busy}
-            onClick={() => selectedPreview && playTrack(playableTrack(project, selectedPreview), playbackContext)}
-            className="inline-flex h-11 shrink-0 items-center gap-2 rounded-xl bg-orange-500 px-3.5 text-xs font-semibold text-stone-950 hover:bg-orange-400 disabled:opacity-35"
-          >
+          <button type="button" disabled={!selectedPreview || busy} onClick={() => selectedPreview && playTrack(playableTrack(project, selectedPreview), playbackContext)} className="inline-flex h-11 shrink-0 items-center gap-2 rounded-xl bg-orange-500 px-3.5 text-xs font-semibold text-stone-950 hover:bg-orange-400 disabled:opacity-35">
             <Play className="size-3.5 fill-current" /> Reproducir
           </button>
         </div>
-        <p className="mt-2 text-xs text-stone-500">WAV, MP3, FLAC y OGG. Se reproduce el archivo original sin conversión.</p>
+        <p className="mt-2 text-xs text-stone-500">WAV, MP3, FLAC y OGG pueden reproducirse y analizarse sin conversión.</p>
       </section>
 
       <section className="mt-7">
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <div><h2 className="flex items-center gap-2 text-sm font-medium text-stone-300"><Files className="size-4 text-orange-300" /> Archivos asociados</h2><p className="mt-1 text-xs text-stone-600">{files.length} {files.length === 1 ? "archivo" : "archivos"}</p></div>
-          <div className="flex gap-2"><select value={category} onChange={(e) => setCategory(e.currentTarget.value as ProjectFileCategory)} disabled={busy} className="h-11 rounded-xl border border-white/[0.08] bg-[#1b1917] px-3 text-xs text-stone-300 outline-none">{categories.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select><button type="button" disabled={busy} onClick={() => void addFiles()} className="inline-flex h-11 items-center gap-2 rounded-xl bg-orange-500 px-4 text-xs font-semibold text-stone-950 hover:bg-orange-400 disabled:opacity-40">{busy ? <LoaderCircle className="size-4 animate-spin" /> : <FilePlus2 className="size-4" />} Agregar archivos</button></div>
+          <div>
+            <h2 className="flex items-center gap-2 text-sm font-medium text-stone-300"><Files className="size-4 text-orange-300" /> Archivos del proyecto</h2>
+            <p className="mt-1 text-xs text-stone-500">
+              {files.length} {files.length === 1 ? "archivo" : "archivos"}
+              {scannedFolders > 0 ? ` · ${scannedFolders} ${scannedFolders === 1 ? "carpeta revisada" : "carpetas revisadas"}` : ""}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" disabled={isSyncing || busy} onClick={() => void synchronize(true)} className="inline-flex h-11 items-center gap-2 rounded-xl border border-white/[0.08] px-3.5 text-xs text-stone-300 hover:bg-white/[0.04] disabled:opacity-40">
+              <RefreshCw className={`size-4 ${isSyncing ? "animate-spin text-orange-300" : ""}`} /> Actualizar
+            </button>
+            <select value={category} onChange={(event) => setCategory(event.currentTarget.value as ProjectFileCategory)} disabled={busy} className="h-11 rounded-xl border border-white/[0.08] bg-[#1b1917] px-3 text-xs text-stone-300 outline-none">
+              {categories.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+            </select>
+            <button type="button" disabled={busy} onClick={() => void addFiles()} className="inline-flex h-11 items-center gap-2 rounded-xl bg-orange-500 px-4 text-xs font-semibold text-stone-950 hover:bg-orange-400 disabled:opacity-40">
+              {busy ? <LoaderCircle className="size-4 animate-spin" /> : <FilePlus2 className="size-4" />} Agregar archivos
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-3 min-h-5" aria-live="polite">
+          {isSyncing ? (
+            <p className="flex items-center gap-2 text-xs text-stone-400" role="status"><RefreshCw className="size-3.5 animate-spin text-orange-300" /> Buscando audio nuevo en las carpetas del proyecto…</p>
+          ) : lastDiscoveredCount > 0 ? (
+            <p className="flex items-center gap-2 text-xs text-emerald-300"><Check className="size-3.5" /> {lastDiscoveredCount} {lastDiscoveredCount === 1 ? "archivo nuevo detectado" : "archivos nuevos detectados"}</p>
+          ) : scannedFolders > 0 ? (
+            <p className="text-xs text-stone-600">Se actualizará automáticamente cuando regreses desde {project.daw}.</p>
+          ) : (
+            <p className="text-xs text-amber-300/80">No se encontraron carpetas de audio reconocidas. Puedes crear la estructura propuesta o agregar archivos manualmente.</p>
+          )}
         </div>
 
         {files.length === 0 ? (
-          <div className="mt-4 rounded-2xl border border-dashed border-white/[0.08] p-10 text-center">
-            <Files className="mx-auto size-7 text-stone-700" />
-            <p className="mt-3 text-sm text-stone-500">Todavía no hay archivos asociados.</p>
+          <div className="mt-3 rounded-2xl border border-dashed border-white/[0.08] px-6 py-10 text-center">
+            <FolderSearch className="mx-auto size-7 text-stone-600" />
+            <p className="mt-3 text-sm font-medium text-stone-300">No encontramos audio dentro del proyecto</p>
+            <p className="mx-auto mt-2 max-w-xl text-xs leading-5 text-stone-500">Exporta en Renders, Audio, Samples o una carpeta configurada. Chilli Beat lo mostrará al volver desde el DAW.</p>
           </div>
         ) : (
-          <div className="mt-4 overflow-hidden rounded-2xl border border-white/[0.07]">
-            <div className="divide-y divide-white/[0.055]">
-              {files.map((file) => {
-                const canPlay = audioTypes.has(file.fileType.toLowerCase()) && !file.isMissing;
-                const track = canPlay ? playableTrack(project, file) : null;
-                return (
-                  <article key={file.id} className="flex flex-wrap items-center gap-3 bg-white/[0.015] px-4 py-3 hover:bg-white/[0.03]">
-                    <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-white/[0.04]"><FileAudio className="size-4 text-stone-500" /></span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="truncate text-sm text-stone-300">{file.fileName}</p>
-                        {file.isMissing ? <span className="rounded bg-red-400/10 px-1.5 py-0.5 text-[0.7rem] text-red-300">No encontrado</span> : null}
-                      </div>
-                      <p className="mt-1 truncate text-xs text-stone-500">{file.fileType || "sin extensión"} · {formatBytes(file.fileSize)}</p>
-                    </div>
-                    {canPlay && track ? (
-                      <>
-                        <button type="button" onClick={() => playTrack(track, playbackContext)} title="Reproducir" className="grid size-11 place-items-center rounded-lg text-stone-500 hover:bg-orange-400/10 hover:text-orange-300"><Play className="size-3.5 fill-current" /></button>
-                        <button type="button" onClick={() => addToQueue(track)} title="Añadir a la cola" className="grid size-11 place-items-center rounded-lg text-stone-500 hover:bg-white/5 hover:text-stone-200"><ListPlus className="size-4" /></button>
-                        <button
-                          type="button"
-                          disabled={analyzingId !== null}
-                          onClick={() => void analyze(file)}
-                          title="Analizar audio"
-                          aria-label={"Analizar " + file.fileName}
-                          aria-expanded={activeAnalysisId === file.id}
-                          aria-controls={"audio-analysis-" + file.id}
-                          className={[
-                            "grid size-11 place-items-center rounded-lg transition disabled:opacity-35",
-                            activeAnalysisId === file.id
-                              ? "bg-orange-400/10 text-orange-300"
-                              : "text-stone-500 hover:bg-white/5 hover:text-stone-200",
-                          ].join(" ")}
-                        >
-                          {analyzingId === file.id ? <LoaderCircle className="size-4 animate-spin text-orange-300" /> : <Activity className="size-4" />}
-                        </button>
-                        <div className="flex overflow-hidden rounded-lg border border-white/[0.07]" aria-label={"Asignar " + file.fileName + " a comparación"}>
-                          {(["a", "b"] as const).map((deck) => (
-                            <button key={deck} type="button" onClick={() => setComparisonTrack(deck, track, analyses[file.id]?.integratedLufs ?? null)} title={"Usar como pista " + deck.toUpperCase()} className="grid h-11 w-9 place-items-center text-[0.7rem] font-semibold uppercase text-stone-500 hover:bg-orange-400/10 hover:text-orange-200">{deck}</button>
-                          ))}
+          <div className="mt-3 overflow-hidden rounded-2xl border border-white/[0.07] divide-y divide-white/[0.07]">
+            {fileGroups.map((group) => (
+              <section key={group.label} aria-label={group.label}>
+                <header className="flex items-center justify-between gap-3 bg-white/[0.025] px-4 py-2.5">
+                  <div className="flex min-w-0 items-center gap-2">
+                    {group.discovered ? <FolderSearch className="size-3.5 shrink-0 text-orange-300" /> : <Files className="size-3.5 shrink-0 text-stone-500" />}
+                    <h3 className="truncate text-xs font-medium text-stone-300">{group.label}</h3>
+                  </div>
+                  <span className="text-xs tabular-nums text-stone-600">{group.files.length}</span>
+                </header>
+                <div className="divide-y divide-white/[0.055]">
+                  {group.files.map((file) => {
+                    const canPlay = audioTypes.has(file.fileType.toLowerCase()) && !file.isMissing;
+                    const track = canPlay ? playableTrack(project, file) : null;
+                    return (
+                      <article key={file.id} className="flex flex-wrap items-center gap-3 bg-white/[0.012] px-4 py-3 hover:bg-white/[0.03]">
+                        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-white/[0.04]"><FileAudio className="size-4 text-stone-500" /></span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="truncate text-sm text-stone-300">{file.fileName}</p>
+                            {file.isMissing ? <span className="rounded bg-red-400/10 px-1.5 py-0.5 text-[0.7rem] text-red-300">No encontrado</span> : null}
+                          </div>
+                          <p className="mt-1 truncate text-xs text-stone-500">{file.fileType || "sin extensión"} · {formatBytes(file.fileSize)}{file.relativePath ? ` · ${file.relativePath}` : ""}</p>
                         </div>
-                      </>
-                    ) : null}
-                    <select value={file.category} disabled={busy} onChange={(event) => void reclassify(file, event.currentTarget.value as ProjectFileCategory)} aria-label={"Categoría de " + file.fileName} className="h-11 rounded-lg border border-white/[0.07] bg-[#1b1917] px-2 text-[0.65rem] text-stone-400 outline-none">
-                      {categories.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-                    </select>
-                    <button type="button" disabled={file.isMissing || busy} onClick={() => void open(file)} title="Abrir archivo" className="grid size-11 place-items-center rounded-lg text-stone-600 hover:bg-white/5 hover:text-stone-300 disabled:opacity-30"><ExternalLink className="size-4" /></button>
-                    <button type="button" disabled={busy} onClick={() => void remove(file)} title="Quitar asociación" className="grid size-11 place-items-center rounded-lg text-stone-600 hover:bg-red-400/10 hover:text-red-300 disabled:opacity-30"><Trash2 className="size-4" /></button>
-                    {activeAnalysisId === file.id ? (
-                      analyzingId === file.id ? (
-                        <AudioAnalysisLoading fileName={file.fileName} />
-                      ) : analysisErrors[file.id] ? (
-                        <AudioAnalysisError
-                          fileName={file.fileName}
-                          message={analysisErrors[file.id]}
-                          onRetry={() => void analyze(file)}
-                          onClose={() => setActiveAnalysisId(null)}
-                        />
-                      ) : analyses[file.id] ? (
-                        <AudioAnalysisPanel
-                          analysis={analyses[file.id]}
-                          file={file}
-                          onClose={() => setActiveAnalysisId(null)}
-                        />
-                      ) : null
-                    ) : null}
-                  </article>
-                );
-              })}
-            </div>
+                        {canPlay && track ? (
+                          <>
+                            <button type="button" onClick={() => playTrack(track, playbackContext)} title="Reproducir" className="grid size-11 place-items-center rounded-lg text-stone-500 hover:bg-orange-400/10 hover:text-orange-300"><Play className="size-3.5 fill-current" /></button>
+                            <button type="button" onClick={() => addToQueue(track)} title="Añadir a la cola" className="grid size-11 place-items-center rounded-lg text-stone-500 hover:bg-white/5 hover:text-stone-200"><ListPlus className="size-4" /></button>
+                            <button type="button" disabled={analyzingId !== null} onClick={() => void analyze(file)} title="Analizar audio" aria-label={`Analizar ${file.fileName}`} aria-expanded={activeAnalysisId === file.id} aria-controls={`audio-analysis-${file.id}`} className={["grid size-11 place-items-center rounded-lg transition disabled:opacity-35", activeAnalysisId === file.id ? "bg-orange-400/10 text-orange-300" : "text-stone-500 hover:bg-white/5 hover:text-stone-200"].join(" ")}>
+                              {analyzingId === file.id ? <LoaderCircle className="size-4 animate-spin text-orange-300" /> : <Activity className="size-4" />}
+                            </button>
+                            <div className="flex overflow-hidden rounded-lg border border-white/[0.07]" aria-label={`Asignar ${file.fileName} a comparación`}>
+                              {(["a", "b"] as const).map((deck) => <button key={deck} type="button" onClick={() => setComparisonTrack(deck, track, analyses[file.id]?.integratedLufs ?? null)} title={`Usar como pista ${deck.toUpperCase()}`} className="grid h-11 w-9 place-items-center text-[0.7rem] font-semibold uppercase text-stone-500 hover:bg-orange-400/10 hover:text-orange-200">{deck}</button>)}
+                            </div>
+                          </>
+                        ) : null}
+                        <select value={file.category} disabled={busy} onChange={(event) => void reclassify(file, event.currentTarget.value as ProjectFileCategory)} aria-label={`Categoría de ${file.fileName}`} className="h-11 rounded-lg border border-white/[0.07] bg-[#1b1917] px-2 text-[0.7rem] text-stone-400 outline-none">
+                          {categories.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                        </select>
+                        <button type="button" disabled={file.isMissing || busy} onClick={() => void open(file)} title="Abrir archivo" className="grid size-11 place-items-center rounded-lg text-stone-600 hover:bg-white/5 hover:text-stone-300 disabled:opacity-30"><ExternalLink className="size-4" /></button>
+                        <button type="button" disabled={busy} onClick={() => void remove(file)} title={file.origin === "discovered" ? "Ocultar archivo" : "Quitar asociación"} className="grid size-11 place-items-center rounded-lg text-stone-600 hover:bg-red-400/10 hover:text-red-300 disabled:opacity-30">
+                          {file.origin === "discovered" ? <EyeOff className="size-4" /> : <Trash2 className="size-4" />}
+                        </button>
+                        {activeAnalysisId === file.id ? (
+                          analyzingId === file.id ? <AudioAnalysisLoading fileName={file.fileName} />
+                            : analysisErrors[file.id] ? <AudioAnalysisError fileName={file.fileName} message={analysisErrors[file.id]} onRetry={() => void analyze(file)} onClose={() => setActiveAnalysisId(null)} />
+                              : analyses[file.id] ? <AudioAnalysisPanel analysis={analyses[file.id]} file={file} onClose={() => setActiveAnalysisId(null)} /> : null
+                        ) : null}
+                      </article>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
           </div>
         )}
       </section>
@@ -296,7 +376,6 @@ export function ProjectFilesPage() {
     </div>
   );
 }
-
 function formatBytes(bytes: number) { if (bytes < 1024) return bytes + " B"; if (bytes < 1024 ** 2) return (bytes / 1024).toFixed(1) + " KB"; if (bytes < 1024 ** 3) return (bytes / 1024 ** 2).toFixed(1) + " MB"; return (bytes / 1024 ** 3).toFixed(2) + " GB"; }
 
 function AudioAnalysisLoading({ fileName }: { fileName: string }) {

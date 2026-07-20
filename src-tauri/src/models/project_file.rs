@@ -44,4 +44,15 @@ pub struct ProjectFile {
     pub file_size: i64,
     pub created_at: String,
     pub is_missing: bool,
+    pub origin: String,
+    pub source_label: Option<String>,
+    pub relative_path: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncProjectFilesResult {
+    pub files: Vec<ProjectFile>,
+    pub discovered_count: usize,
+    pub scanned_folders: usize,
 }

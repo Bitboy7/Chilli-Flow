@@ -67,6 +67,7 @@ pub fn run() {
             commands::project_versions::open_project_version,
             commands::project_versions::reveal_project_version,
             commands::project_files::list_project_files,
+            commands::project_files::sync_project_files,
             commands::project_files::select_project_files,
             commands::project_files::remove_project_file,
             commands::project_files::set_project_file_category,

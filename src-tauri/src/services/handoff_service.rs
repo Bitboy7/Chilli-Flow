@@ -554,6 +554,9 @@ mod tests {
             file_size: 1,
             created_at: String::new(),
             is_missing: false,
+            origin: "manual".into(),
+            source_label: None,
+            relative_path: None,
         };
         assert_eq!(package_directory(&file, "wet"), PathBuf::from("Audio/Stems/Wet"));
         assert_eq!(package_directory(&file, "dry"), PathBuf::from("Audio/Stems/Dry"));

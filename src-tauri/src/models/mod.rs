@@ -28,7 +28,7 @@ pub use handoff::{
 pub use finish_mode::{FinishPriority, FinishTaskInput, FinishTaskStatus};
 pub use project::DiscoveredProject;
 pub use project_detail::{CoverAsset, ProjectDetail, ProjectFolderCategory, ProjectFolderPaths, UpdateProjectInput};
-pub use project_file::{ProjectFile, ProjectFileCategory};
+pub use project_file::{ProjectFile, ProjectFileCategory, SyncProjectFilesResult};
 pub use project_query::{
     ProjectFacets, ProjectListItem, ProjectPage, ProjectQuery, ProjectSort,
     ProjectStatusFacet, ProjectTagFacet, SortDirection,

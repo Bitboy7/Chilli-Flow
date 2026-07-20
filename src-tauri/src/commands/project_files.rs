@@ -2,7 +2,7 @@ use tauri::{AppHandle, Manager, State};
 use tauri_plugin_dialog::DialogExt;
 
 use crate::{
-    models::{ProjectFile, ProjectFileCategory},
+    models::{ProjectFile, ProjectFileCategory, SyncProjectFilesResult},
     services::ProjectFileService,
     state::AppState,
 };
@@ -12,6 +12,14 @@ pub fn list_project_files(state: State<'_, AppState>, project_id: i64) -> Result
     ProjectFileService::list(&state, project_id).map_err(|error| error.to_string())
 }
 
+
+#[tauri::command]
+pub fn sync_project_files(
+    state: State<'_, AppState>,
+    project_id: i64,
+) -> Result<SyncProjectFilesResult, String> {
+    ProjectFileService::sync(&state, project_id).map_err(|error| error.to_string())
+}
 #[tauri::command]
 pub async fn select_project_files(
     app: AppHandle,
