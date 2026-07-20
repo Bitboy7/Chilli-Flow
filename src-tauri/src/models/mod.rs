@@ -3,6 +3,7 @@ mod app_status;
 mod custom_extension;
 mod folder_setup;
 mod finish_mode;
+mod handoff;
 mod project;
 mod project_detail;
 mod project_file;
@@ -19,6 +20,9 @@ pub use folder_setup::{FolderSetupItem, FolderSetupPlan};
 pub use finish_mode::{
     FinishDashboard, FinishProjectItem, FinishProjectPlan, FinishSummary, FinishTask,
     UpdateFinishPlanInput,
+};
+pub use handoff::{
+    CreateHandoffInput, HandoffExportResult, HandoffPreview, HandoffSettings,
 };
 #[cfg(test)]
 pub use finish_mode::{FinishPriority, FinishTaskInput, FinishTaskStatus};

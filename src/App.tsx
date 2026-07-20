@@ -12,6 +12,7 @@ const ProjectEditorPage = lazy(() => import("./pages/ProjectEditorPage").then((m
 const ProjectFilesPage = lazy(() => import("./pages/ProjectFilesPage").then((module) => ({ default: module.ProjectFilesPage })));
 const ProjectFinishPage = lazy(() => import("./pages/ProjectFinishPage").then((module) => ({ default: module.ProjectFinishPage })));
 const ProjectVersionsPage = lazy(() => import("./pages/ProjectVersionsPage").then((module) => ({ default: module.ProjectVersionsPage })));
+const ProjectHandoffPage = lazy(() => import("./pages/ProjectHandoffPage").then((module) => ({ default: module.ProjectHandoffPage })));
 const ProjectWorkspacePage = lazy(() => import("./pages/ProjectWorkspacePage").then((module) => ({ default: module.ProjectWorkspacePage })));
 const NewProjectPage = lazy(() => import("./pages/NewProjectPage").then((module) => ({ default: module.NewProjectPage })));
 const ScanHistoryPage = lazy(() => import("./pages/ScanHistoryPage").then((module) => ({ default: module.ScanHistoryPage })));
@@ -36,6 +37,7 @@ export default function App() {
           <Route path="audio" element={<ProjectFilesPage />} />
           <Route path="finish" element={<ProjectFinishPage />} />
           <Route path="versions" element={<ProjectVersionsPage />} />
+          <Route path="handoff" element={<ProjectHandoffPage />} />
           <Route path="files" element={<Navigate to="../audio" replace />} />
         </Route>
         <Route path="/projects/:projectId/edit" element={<ProjectEditorPage />} />

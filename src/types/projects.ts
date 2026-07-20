@@ -178,3 +178,36 @@ export interface CreateWorkspaceInput {
   parentDirectory: string;
   templatePath: string | null;
 }
+
+export interface HandoffSettings {
+  dawVersion: string | null;
+  timeSignature: string;
+  commonStart: string;
+  collaboratorNotes: string | null;
+  plugins: string[];
+}
+
+export interface HandoffFileSelection {
+  fileId: number;
+  variant: "wet" | "dry" | "neutral";
+}
+
+export interface HandoffPreview {
+  settings: HandoffSettings;
+  files: ProjectFile[];
+  warnings: string[];
+  nextVersion: number;
+}
+
+export interface CreateHandoffInput {
+  settings: HandoffSettings;
+  selections: HandoffFileSelection[];
+  includeProjectFile: boolean;
+  destinationParent: string;
+}
+
+export interface HandoffExportResult {
+  destinationPath: string;
+  versionNumber: number;
+  fileCount: number;
+}

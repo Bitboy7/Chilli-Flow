@@ -1,4 +1,4 @@
-import { ArrowLeft, CircleAlert, FilePenLine, Heart, History, Info, Layers3, LayoutDashboard, ListChecks, LoaderCircle } from "lucide-react";
+import { ArrowLeft, CircleAlert, FilePenLine, Heart, History, Info, Layers3, LayoutDashboard, ListChecks, LoaderCircle, PackageOpen } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useParams } from "react-router-dom";
 
@@ -59,8 +59,8 @@ export function ProjectWorkspacePage() {
         <ArrowLeft className="size-3.5" /> Volver a la biblioteca
       </Link>
 
-      <header className="mt-5 flex flex-col gap-5 border-b border-white/[0.07] pb-5 sm:flex-row sm:items-center">
-        <div className="w-full shrink-0 overflow-hidden rounded-2xl border border-white/[0.08] sm:w-36">
+      <header className="mt-5 flex flex-col gap-5 border-b border-white/[0.07] pb-5 lg:flex-row lg:items-center">
+        <div className="w-full shrink-0 overflow-hidden rounded-2xl border border-white/[0.08] lg:w-36">
           <ProjectArtwork projectId={project.id} coverPath={project.coverPath} daw={project.daw} name={project.displayName} />
         </div>
         <div className="min-w-0 flex-1">
@@ -93,11 +93,12 @@ export function ProjectWorkspacePage() {
         </div>
       ) : null}
 
-      <nav className="mt-4 flex gap-1 rounded-xl border border-white/[0.07] bg-black/10 p-1" aria-label="Secciones del proyecto">
+      <nav className="mt-4 flex gap-1 overflow-x-auto rounded-xl border border-white/[0.07] bg-black/10 p-1" aria-label="Secciones del proyecto">
         <WorkspaceTab to={"/projects/" + project.id} end icon={<LayoutDashboard className="size-4" />}>Resumen</WorkspaceTab>
         <WorkspaceTab to={"/projects/" + project.id + "/audio"} icon={<Layers3 className="size-4" />}>Audio y archivos</WorkspaceTab>
         <WorkspaceTab to={"/projects/" + project.id + "/finish"} icon={<ListChecks className="size-4" />}>Plan de cierre</WorkspaceTab>
         <WorkspaceTab to={"/projects/" + project.id + "/versions"} icon={<History className="size-4" />}>Versiones</WorkspaceTab>
+        <WorkspaceTab to={"/projects/" + project.id + "/handoff"} icon={<PackageOpen className="size-4" />}>Handoff</WorkspaceTab>
       </nav>
 
       <Outlet context={{ project, setProject } satisfies ProjectWorkspaceContext} />
@@ -106,7 +107,7 @@ export function ProjectWorkspacePage() {
 }
 
 function WorkspaceTab({ to, end = false, icon, children }: { to: string; end?: boolean; icon: React.ReactNode; children: React.ReactNode }) {
-  return <NavLink to={to} end={end} className={({ isActive }) => ["inline-flex h-9 items-center gap-2 rounded-lg px-3 text-xs font-medium transition", isActive ? "bg-white/[0.07] text-stone-100 shadow-sm" : "text-stone-500 hover:bg-white/[0.035] hover:text-stone-300"].join(" ")}>{icon}{children}</NavLink>;
+  return <NavLink to={to} end={end} className={({ isActive }) => ["inline-flex h-10 shrink-0 items-center gap-2 rounded-lg px-3 text-xs font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-400", isActive ? "bg-white/[0.07] text-stone-100 shadow-sm" : "text-stone-400 hover:bg-white/[0.035] hover:text-stone-200"].join(" ")}>{icon}{children}</NavLink>;
 }
 
 function WorkspaceError({ message }: { message: string }) {

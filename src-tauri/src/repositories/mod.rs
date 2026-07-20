@@ -1,5 +1,6 @@
 mod custom_extension_repository;
 mod library_repository;
+mod handoff_repository;
 mod project_repository;
 mod project_detail_repository;
 mod project_file_repository;
@@ -10,6 +11,7 @@ mod scan_history_repository;
 mod watched_folder_repository;
 
 pub use custom_extension_repository::CustomExtensionRepository;
+pub use handoff_repository::HandoffRepository;
 pub use library_repository::LibraryRepository;
 pub use project_repository::ProjectRepository;
 pub use project_detail_repository::ProjectDetailRepository;
