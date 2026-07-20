@@ -172,7 +172,7 @@ pub(crate) fn authorized_existing_project(state: &AppState, project_id: i64) -> 
     Ok(path)
 }
 
-fn authorize_project_path(path: &Path, watched_paths: &[String]) -> AppResult<()> {
+pub(crate) fn authorize_project_path(path: &Path, watched_paths: &[String]) -> AppResult<()> {
     let authorized = watched_paths.iter().any(|watched| {
         dunce::canonicalize(watched)
             .map(|folder| path.starts_with(folder))

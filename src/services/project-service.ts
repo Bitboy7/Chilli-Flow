@@ -10,6 +10,7 @@ import type {
   ProjectFileCategory,
   ProjectFolderCategory,
   ProjectPage,
+  ProjectVersionSet,
   ProjectQuery,
   UpdateProjectInput,
 } from "../types/projects";
@@ -126,4 +127,28 @@ export function previewProjectFolderSetup(projectId: number): Promise<FolderSetu
 
 export function applyProjectFolderSetup(projectId: number, token: number): Promise<ProjectDetail> {
   return invoke<ProjectDetail>("apply_project_folder_setup", { projectId, token });
+}
+
+export function listProjectVersions(projectId: number): Promise<ProjectVersionSet> {
+  return invoke<ProjectVersionSet>("list_project_versions", { projectId });
+}
+
+export function confirmProjectVersion(projectId: number, versionId: number): Promise<ProjectVersionSet> {
+  return invoke<ProjectVersionSet>("confirm_project_version", { projectId, versionId });
+}
+
+export function detachProjectVersion(projectId: number, versionId: number): Promise<ProjectVersionSet> {
+  return invoke<ProjectVersionSet>("detach_project_version", { projectId, versionId });
+}
+
+export function promoteProjectVersion(projectId: number, versionId: number): Promise<ProjectVersionSet> {
+  return invoke<ProjectVersionSet>("promote_project_version", { projectId, versionId });
+}
+
+export function openProjectVersion(projectId: number, versionId: number): Promise<void> {
+  return invoke<void>("open_project_version", { projectId, versionId });
+}
+
+export function revealProjectVersion(projectId: number, versionId: number): Promise<void> {
+  return invoke<void>("reveal_project_version", { projectId, versionId });
 }

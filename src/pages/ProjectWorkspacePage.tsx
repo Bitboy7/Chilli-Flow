@@ -1,4 +1,4 @@
-import { ArrowLeft, CircleAlert, FilePenLine, Heart, Layers3, LayoutDashboard, ListChecks, LoaderCircle } from "lucide-react";
+import { ArrowLeft, CircleAlert, FilePenLine, Heart, History, Layers3, LayoutDashboard, ListChecks, LoaderCircle } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useParams } from "react-router-dom";
 
@@ -88,6 +88,7 @@ export function ProjectWorkspacePage() {
         <WorkspaceTab to={"/projects/" + project.id} end icon={<LayoutDashboard className="size-4" />}>Resumen</WorkspaceTab>
         <WorkspaceTab to={"/projects/" + project.id + "/audio"} icon={<Layers3 className="size-4" />}>Audio y archivos</WorkspaceTab>
         <WorkspaceTab to={"/projects/" + project.id + "/finish"} icon={<ListChecks className="size-4" />}>Plan de cierre</WorkspaceTab>
+        <WorkspaceTab to={"/projects/" + project.id + "/versions"} icon={<History className="size-4" />}>Versiones</WorkspaceTab>
       </nav>
 
       <Outlet context={{ project, setProject } satisfies ProjectWorkspaceContext} />

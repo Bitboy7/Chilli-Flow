@@ -93,10 +93,31 @@ export interface UpdateProjectInput {
   bpm: number | null;
   musicalKey: string | null;
   genre: string | null;
+
   status: string;
   rating: number | null;
   notes: string | null;
   tags: string[];
+}
+
+export type ProjectVersionKind = "primary" | "backup" | "copy" | "version";
+export type ProjectVersionConfidence = "high" | "suggested" | "confirmed" | null;
+
+export interface ProjectVersionItem {
+  id: number;
+  fileName: string;
+  filePath: string;
+  kind: ProjectVersionKind;
+  confidence: ProjectVersionConfidence;
+  fileSize: number;
+  fileModifiedAt: string | null;
+  isMissing: boolean;
+}
+
+export interface ProjectVersionSet {
+  projectId: number;
+  primary: ProjectVersionItem;
+  versions: ProjectVersionItem[];
 }
 
 export interface CoverAsset {

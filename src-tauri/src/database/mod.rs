@@ -90,7 +90,7 @@ mod tests {
             .query_row("SELECT COUNT(*) FROM project_statuses", [], |row| row.get(0))
             .expect("status count");
 
-        assert_eq!(schema_version, 6);
+        assert_eq!(schema_version, 7);
         assert_eq!(statuses, 8);
     }
 

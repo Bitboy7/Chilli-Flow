@@ -7,6 +7,7 @@ mod project;
 mod project_detail;
 mod project_file;
 mod project_query;
+mod project_version;
 mod playback;
 mod scan;
 mod watched_folder;
@@ -27,6 +28,7 @@ pub use project_query::{
     ProjectFacets, ProjectListItem, ProjectPage, ProjectQuery, ProjectSort,
     ProjectStatusFacet, ProjectTagFacet, SortDirection,
 };
+pub use project_version::{ProjectVersionItem, ProjectVersionSet};
 pub use playback::{
     PlayableTrack, PlaybackSession, PlaybackSessionInput, PlaybackTrackRef,
 };

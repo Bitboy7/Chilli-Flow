@@ -6,6 +6,7 @@ pub mod folders;
 pub mod library;
 pub mod projects;
 pub mod project_files;
+pub mod project_versions;
 pub mod playback;
 pub mod scanning;
 pub mod audio_analysis;
