@@ -10,6 +10,11 @@ export interface PlayableTrack {
   isMissing: boolean;
 }
 
+export interface ComparisonTrack {
+  track: PlayableTrack;
+  integratedLufs: number | null;
+}
+
 export interface PlaybackSession {
   queue: PlayableTrack[];
   currentIndex: number | null;

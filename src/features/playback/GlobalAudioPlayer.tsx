@@ -1,6 +1,6 @@
 import {
-  ChevronDown, ChevronLeft, ChevronRight, ListMusic, Music2, Pause, Play,
-  Repeat2, Shuffle, Trash2, Volume2, X,
+  ChevronDown, ChevronLeft, ChevronRight, GitCompareArrows, ListMusic, Music2, Pause, Play,
+  Repeat2, Scale, Shuffle, Trash2, Volume2, X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -8,14 +8,23 @@ import { getPlaybackSession, savePlaybackSession } from "../../services/playback
 import { projectAudioUrl } from "../../services/project-service";
 import { playbackSessionInput, usePlaybackStore } from "../../stores/playback-store";
 import { useToastStore } from "../../stores/toast-store";
+import { comparisonGains } from "../../utils/audio";
 import { errorMessage } from "../../utils/errors";
 
 export function GlobalAudioPlayer() {
   const audioRef = useRef<HTMLAudioElement>(null);
+  const comparisonBRef = useRef<HTMLAudioElement>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [comparisonAUrl, setComparisonAUrl] = useState<string | null>(null);
+  const [comparisonBUrl, setComparisonBUrl] = useState<string | null>(null);
   const pushToast = useToastStore((state) => state.push);
   const state = usePlaybackStore();
   const currentTrack = state.currentIndex === null ? null : state.queue[state.currentIndex] ?? null;
+  const isComparing = Boolean(state.comparisonA && state.comparisonB);
+  const displayTrack = isComparing
+    ? (state.comparisonDeck === "a" ? state.comparisonA?.track : state.comparisonB?.track)
+    : currentTrack ?? state.comparisonA?.track ?? state.comparisonB?.track;
+  const primaryUrl = isComparing ? comparisonAUrl : audioUrl;
 
   useEffect(() => {
     let active = true;
@@ -42,21 +51,51 @@ export function GlobalAudioPlayer() {
   }, [currentTrack?.fileId, currentTrack?.projectId]);
 
   useEffect(() => {
+    let active = true;
+    setComparisonAUrl(null);
+    const track = state.comparisonA?.track;
+    if (!track || track.isMissing) return;
+    void projectAudioUrl(track.projectId, track.fileId)
+      .then((url) => { if (active) setComparisonAUrl(url); })
+      .catch((cause) => pushToast({ kind: "error", title: "No se pudo cargar la pista A", description: errorMessage(cause) }));
+    return () => { active = false; };
+  }, [state.comparisonA?.track.fileId, state.comparisonA?.track.projectId]);
+
+  useEffect(() => {
+    let active = true;
+    setComparisonBUrl(null);
+    const track = state.comparisonB?.track;
+    if (!track || track.isMissing) return;
+    void projectAudioUrl(track.projectId, track.fileId)
+      .then((url) => { if (active) setComparisonBUrl(url); })
+      .catch((cause) => pushToast({ kind: "error", title: "No se pudo cargar la pista B", description: errorMessage(cause) }));
+    return () => { active = false; };
+  }, [state.comparisonB?.track.fileId, state.comparisonB?.track.projectId]);
+
+  useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !audioUrl) return;
+    const comparisonB = comparisonBRef.current;
+    if (!audio || !primaryUrl) return;
     if (state.isPlaying) {
       void audio.play().catch((cause) => {
         state.setPlaying(false);
         pushToast({ kind: "error", title: "No se pudo reproducir", description: errorMessage(cause) });
       });
+      if (isComparing && comparisonB && comparisonBUrl) {
+        comparisonB.currentTime = audio.currentTime;
+        void comparisonB.play().catch(() => undefined);
+      }
     } else {
       audio.pause();
+      comparisonB?.pause();
     }
-  }, [audioUrl, state.isPlaying]);
+  }, [comparisonBUrl, isComparing, primaryUrl, state.isPlaying]);
 
   useEffect(() => {
-    if (audioRef.current) audioRef.current.volume = state.volume;
-  }, [state.volume]);
+    const gains = comparisonGains(state.comparisonA?.integratedLufs, state.comparisonB?.integratedLufs, state.levelMatch);
+    if (audioRef.current) audioRef.current.volume = state.volume * (isComparing && state.comparisonDeck === "b" ? 0 : gains.a);
+    if (comparisonBRef.current) comparisonBRef.current.volume = state.volume * (isComparing && state.comparisonDeck === "b" ? gains.b : 0);
+  }, [isComparing, state.comparisonA?.integratedLufs, state.comparisonB?.integratedLufs, state.comparisonDeck, state.levelMatch, state.volume]);
 
   useEffect(() => {
     if (!state.isRestored) return;
@@ -75,10 +114,11 @@ export function GlobalAudioPlayer() {
     return () => window.clearInterval(timer);
   }, []);
 
-  if (!currentTrack) return null;
+  if (!displayTrack) return null;
 
   const seek = (seconds: number) => {
     if (audioRef.current) audioRef.current.currentTime = seconds;
+    if (comparisonBRef.current) comparisonBRef.current.currentTime = seconds;
     state.setCurrentTime(seconds);
   };
 
@@ -86,7 +126,7 @@ export function GlobalAudioPlayer() {
     <>
       <audio
         ref={audioRef}
-        src={audioUrl ?? undefined}
+        src={primaryUrl ?? undefined}
         preload="metadata"
         onPlay={() => state.setPlaying(true)}
         onPause={() => state.setPlaying(false)}
@@ -97,6 +137,10 @@ export function GlobalAudioPlayer() {
           event.currentTarget.currentTime = Math.min(state.currentTime, duration || 0);
         }}
         onEnded={() => {
+          if (isComparing) {
+            state.setPlaying(false);
+            return;
+          }
           if (state.repeatMode === "one") {
             seek(0);
             void audioRef.current?.play();
@@ -105,6 +149,7 @@ export function GlobalAudioPlayer() {
           }
         }}
       />
+      <audio ref={comparisonBRef} src={isComparing ? comparisonBUrl ?? undefined : undefined} preload="metadata" aria-hidden />
 
       {state.isQueueOpen ? (
         <aside className="fixed bottom-[4.75rem] right-3 z-40 flex max-h-[min(32rem,70vh)] w-[min(24rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-xl border border-white/[0.1] bg-[#1b1917] shadow-[0_8px_20px_rgba(0,0,0,0.45)]" aria-label="Cola de reproducción">
@@ -136,14 +181,17 @@ export function GlobalAudioPlayer() {
       <footer className="relative z-30 grid h-[4.25rem] shrink-0 grid-cols-[minmax(0,1fr)_minmax(18rem,2fr)_minmax(0,1fr)] items-center gap-4 border-t border-white/[0.08] bg-[#12110f] px-4">
         <div className="flex min-w-0 items-center gap-3">
           <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-orange-500/10 text-orange-300"><Music2 className="size-4" /></span>
-          <div className="min-w-0"><p className="truncate text-xs font-medium text-stone-200">{currentTrack.fileName}</p><p className="mt-0.5 truncate text-[0.62rem] text-stone-500">{currentTrack.projectName}</p></div>
+          <div className="min-w-0">
+            <p className="truncate text-xs font-medium text-stone-200">{displayTrack.fileName}</p>
+            <p className="mt-0.5 truncate text-[0.62rem] text-stone-500">{displayTrack.projectName}{isComparing ? " · Comparación " + state.comparisonDeck.toUpperCase() : ""}</p>
+          </div>
         </div>
 
         <div className="min-w-0">
           <div className="flex items-center justify-center gap-2">
             <PlayerButton active={state.shuffle} label="Aleatorio" onClick={state.toggleShuffle}><Shuffle className="size-3.5" /></PlayerButton>
             <PlayerButton label="Anterior" onClick={() => state.currentTime > 3 ? seek(0) : state.previous()}><ChevronLeft className="size-4" /></PlayerButton>
-            <button type="button" disabled={!audioUrl} onClick={() => state.setPlaying(!state.isPlaying)} className="grid size-9 place-items-center rounded-full bg-orange-500 text-stone-950 hover:bg-orange-400 disabled:opacity-35" aria-label={state.isPlaying ? "Pausar" : "Reproducir"}>
+            <button type="button" disabled={!primaryUrl || (isComparing && !comparisonBUrl)} onClick={() => state.setPlaying(!state.isPlaying)} className="grid size-9 place-items-center rounded-full bg-orange-500 text-stone-950 hover:bg-orange-400 disabled:opacity-35" aria-label={state.isPlaying ? "Pausar" : "Reproducir"}>
               {state.isPlaying ? <Pause className="size-4 fill-current" /> : <Play className="ml-0.5 size-4 fill-current" />}
             </button>
             <PlayerButton label="Siguiente" onClick={state.next}><ChevronRight className="size-4" /></PlayerButton>
@@ -151,12 +199,23 @@ export function GlobalAudioPlayer() {
           </div>
           <div className="mt-1 flex items-center gap-2">
             <span className="w-9 text-right text-[0.58rem] text-stone-600">{formatTime(state.currentTime)}</span>
-            <input type="range" min={0} max={state.duration || 0} step="0.01" value={Math.min(state.currentTime, state.duration || 0)} disabled={!audioUrl} onChange={(event) => seek(Number(event.currentTarget.value))} className="h-1 min-w-0 flex-1 accent-orange-500" aria-label="Progreso" />
+            <input type="range" min={0} max={state.duration || 0} step="0.01" value={Math.min(state.currentTime, state.duration || 0)} disabled={!primaryUrl} onChange={(event) => seek(Number(event.currentTarget.value))} className="h-1 min-w-0 flex-1 accent-orange-500" aria-label="Progreso" />
             <span className="w-9 text-[0.58rem] text-stone-600">{formatTime(state.duration)}</span>
           </div>
         </div>
 
         <div className="flex min-w-0 items-center justify-end gap-2">
+          {isComparing ? (
+            <div className="flex items-center gap-1 rounded-lg border border-white/[0.08] p-0.5">
+              {(["a", "b"] as const).map((deck) => (
+                <button key={deck} type="button" onClick={() => state.comparisonDeck !== deck && state.toggleComparisonDeck()} className={["grid size-7 place-items-center rounded-md text-[0.62rem] font-semibold uppercase", state.comparisonDeck === deck ? "bg-orange-500 text-stone-950" : "text-stone-500 hover:text-stone-200"].join(" ")} aria-pressed={state.comparisonDeck === deck}>{deck}</button>
+              ))}
+              <button type="button" onClick={state.toggleLevelMatch} disabled={state.comparisonA?.integratedLufs === null || state.comparisonB?.integratedLufs === null} className={["grid size-7 place-items-center rounded-md disabled:opacity-30", state.levelMatch ? "text-orange-300" : "text-stone-500"].join(" ")} title="Igualar nivel mediante LUFS" aria-pressed={state.levelMatch}><Scale className="size-3.5" /></button>
+              <button type="button" onClick={state.clearComparison} className="grid size-7 place-items-center rounded-md text-stone-500 hover:text-red-300" title="Cerrar comparación"><X className="size-3.5" /></button>
+            </div>
+          ) : state.comparisonA || state.comparisonB ? (
+            <span className="inline-flex items-center gap-1.5 text-[0.62rem] text-stone-600"><GitCompareArrows className="size-3.5" /> Asigna A y B</span>
+          ) : null}
           <button type="button" onClick={state.toggleQueue} className={["inline-flex h-8 items-center gap-2 rounded-lg px-2.5 text-xs", state.isQueueOpen ? "bg-orange-500/10 text-orange-200" : "text-stone-500 hover:bg-white/5 hover:text-stone-200"].join(" ")} aria-expanded={state.isQueueOpen}><ListMusic className="size-3.5" /> Cola</button>
           <Volume2 className="size-3.5 shrink-0 text-stone-600" />
           <input type="range" min={0} max={1} step="0.01" value={state.volume} onChange={(event) => state.setVolume(Number(event.currentTarget.value))} className="h-1 w-20 accent-orange-500" aria-label="Volumen" />

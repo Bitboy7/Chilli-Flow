@@ -30,6 +30,7 @@ export function ProjectFilesPage() {
   const pushToast = useToastStore((state) => state.push);
   const playTrack = usePlaybackStore((state) => state.playTrack);
   const addToQueue = usePlaybackStore((state) => state.addToQueue);
+  const setComparisonTrack = usePlaybackStore((state) => state.setComparisonTrack);
   const [files, setFiles] = useState<ProjectFile[]>([]);
   const [category, setCategory] = useState<ProjectFileCategory>("stem");
   const [previewId, setPreviewId] = useState<number | null>(null);
@@ -172,6 +173,11 @@ export function ProjectFilesPage() {
                         <button type="button" disabled={analyzingId !== null} onClick={() => void analyze(file)} title="Analizar audio" className="grid size-8 place-items-center rounded-lg text-stone-500 hover:bg-white/5 hover:text-stone-200 disabled:opacity-35">
                           {analyzingId === file.id ? <LoaderCircle className="size-4 animate-spin text-orange-300" /> : <Activity className="size-4" />}
                         </button>
+                        <div className="flex overflow-hidden rounded-lg border border-white/[0.07]" aria-label={"Asignar " + file.fileName + " a comparación"}>
+                          {(["a", "b"] as const).map((deck) => (
+                            <button key={deck} type="button" onClick={() => setComparisonTrack(deck, track, analyses[file.id]?.integratedLufs ?? null)} title={"Usar como pista " + deck.toUpperCase()} className="grid size-7 place-items-center text-[0.62rem] font-semibold uppercase text-stone-500 hover:bg-orange-400/10 hover:text-orange-200">{deck}</button>
+                          ))}
+                        </div>
                       </>
                     ) : null}
                     <select value={file.category} disabled={busy} onChange={(event) => void reclassify(file, event.currentTarget.value as ProjectFileCategory)} aria-label={"Categoría de " + file.fileName} className="h-8 rounded-lg border border-white/[0.07] bg-[#1b1917] px-2 text-[0.65rem] text-stone-400 outline-none">

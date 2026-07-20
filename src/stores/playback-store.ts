@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-import type { PlaybackSession, PlayableTrack, RepeatMode } from "../types/playback";
+import type { ComparisonTrack, PlaybackSession, PlayableTrack, RepeatMode } from "../types/playback";
 
 interface PlaybackState {
   queue: PlayableTrack[];
@@ -13,6 +13,10 @@ interface PlaybackState {
   shuffle: boolean;
   isQueueOpen: boolean;
   isRestored: boolean;
+  comparisonA: ComparisonTrack | null;
+  comparisonB: ComparisonTrack | null;
+  comparisonDeck: "a" | "b";
+  levelMatch: boolean;
   restore: (session: PlaybackSession) => void;
   markRestored: () => void;
   playTrack: (track: PlayableTrack, context?: PlayableTrack[]) => void;
@@ -30,6 +34,10 @@ interface PlaybackState {
   cycleRepeat: () => void;
   toggleShuffle: () => void;
   toggleQueue: () => void;
+  setComparisonTrack: (deck: "a" | "b", track: PlayableTrack, integratedLufs: number | null) => void;
+  toggleComparisonDeck: () => void;
+  toggleLevelMatch: () => void;
+  clearComparison: () => void;
 }
 
 const sameTrack = (left: PlayableTrack, right: PlayableTrack) =>
@@ -46,6 +54,10 @@ export const usePlaybackStore = create<PlaybackState>((set) => ({
   shuffle: false,
   isQueueOpen: false,
   isRestored: false,
+  comparisonA: null,
+  comparisonB: null,
+  comparisonDeck: "a",
+  levelMatch: true,
   restore: (session) => set({
     queue: session.queue,
     currentIndex: session.currentIndex,
@@ -126,6 +138,24 @@ export const usePlaybackStore = create<PlaybackState>((set) => ({
   })),
   toggleShuffle: () => set((state) => ({ shuffle: !state.shuffle })),
   toggleQueue: () => set((state) => ({ isQueueOpen: !state.isQueueOpen })),
+  setComparisonTrack: (deck, track, integratedLufs) => set((state) => {
+    const selected = { track, integratedLufs };
+    if (deck === "a") {
+      return {
+        comparisonA: selected,
+        comparisonB: state.comparisonB?.track.projectId === track.projectId ? state.comparisonB : null,
+        comparisonDeck: "a",
+      };
+    }
+    return {
+      comparisonA: state.comparisonA?.track.projectId === track.projectId ? state.comparisonA : null,
+      comparisonB: selected,
+      comparisonDeck: state.comparisonA?.track.projectId === track.projectId ? state.comparisonDeck : "b",
+    };
+  }),
+  toggleComparisonDeck: () => set((state) => ({ comparisonDeck: state.comparisonDeck === "a" ? "b" : "a" })),
+  toggleLevelMatch: () => set((state) => ({ levelMatch: !state.levelMatch })),
+  clearComparison: () => set({ comparisonA: null, comparisonB: null, comparisonDeck: "a" }),
 }));
 
 export function playbackSessionInput() {
