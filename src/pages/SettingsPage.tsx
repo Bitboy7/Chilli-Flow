@@ -1,8 +1,10 @@
 import {
   BadgePlus,
+  Check,
   CircleAlert,
   LoaderCircle,
   LockKeyhole,
+  Palette,
   Puzzle,
   Trash2,
 } from "lucide-react";
@@ -15,6 +17,8 @@ import {
   setCustomExtensionEnabled,
 } from "../services/extension-service";
 import { useToastStore } from "../stores/toast-store";
+import { useUiStore } from "../stores/ui-store";
+import { colorThemes } from "../theme/color-themes";
 import type { ExtensionCatalogItem } from "../types/folders";
 import { errorMessage } from "../utils/errors";
 
@@ -142,6 +146,8 @@ export function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const pushToast = useToastStore((state) => state.push);
+  const colorTheme = useUiStore((state) => state.colorTheme);
+  const setColorTheme = useUiStore((state) => state.setColorTheme);
 
   const load = useCallback(async () => {
     try {
@@ -189,17 +195,57 @@ export function SettingsPage() {
   return (
     <div className="mx-auto w-full max-w-5xl p-5 lg:p-8">
       <header>
-        <p className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-orange-400/70">
-          Preferencias locales
-        </p>
-        <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-100">
-          Extensiones de proyectos
+        <h2 className="text-2xl font-semibold tracking-tight text-stone-100">
+          Configuración
         </h2>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-500">
-          Amplía el catálogo sin modificar el código. Las extensiones se
-          normalizan, validan y almacenan en SQLite.
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-400">
+          Personaliza la apariencia y define qué archivos reconoce Chilli Beat como proyectos.
         </p>
       </header>
+
+      <section className="mt-6 border-y border-white/[0.07] py-5" aria-labelledby="color-theme-heading">
+        <div className="flex items-start gap-3">
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-orange-400/[0.08] text-orange-300">
+            <Palette className="size-4" />
+          </span>
+          <div>
+            <h3 id="color-theme-heading" className="text-sm font-medium text-stone-200">Tema de color</h3>
+            <p className="mt-1 text-xs leading-5 text-stone-400">Elige el acento de controles, estados activos y acciones principales. La preferencia se guarda en este equipo.</p>
+          </div>
+        </div>
+        <div role="radiogroup" aria-label="Tema de color de la aplicación" className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+          {colorThemes.map((theme) => {
+            const isSelected = colorTheme === theme.id;
+            return (
+              <button
+                key={theme.id}
+                type="button"
+                role="radio"
+                aria-checked={isSelected}
+                onClick={() => setColorTheme(theme.id)}
+                className={[
+                  "relative min-h-24 rounded-xl border p-3 text-left transition",
+                  isSelected
+                    ? "border-orange-400/45 bg-orange-400/[0.07] ring-1 ring-orange-400/15"
+                    : "border-white/[0.08] bg-white/[0.018] hover:border-white/[0.16] hover:bg-white/[0.035]",
+                ].join(" ")}
+              >
+                <span className="flex items-center gap-1.5" aria-hidden="true">
+                  {theme.swatches.map((color) => <span key={color} className="size-4 rounded-full ring-1 ring-white/10" style={{ backgroundColor: color }} />)}
+                </span>
+                <span className="mt-3 block text-xs font-medium text-stone-200">{theme.label}</span>
+                <span className="mt-1 block text-[0.68rem] leading-4 text-stone-500">{theme.description}</span>
+                {isSelected ? <Check className="absolute right-3 top-3 size-4 text-orange-300" aria-hidden="true" /> : null}
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <div className="mt-6">
+        <h3 className="text-base font-medium text-stone-200">Extensiones de proyectos</h3>
+        <p className="mt-1 text-xs leading-5 text-stone-400">Amplía el catálogo sin modificar el código. Los cambios se aplican en el siguiente escaneo.</p>
+      </div>
 
       <form
         onSubmit={(event) => void handleSubmit(event)}
@@ -220,7 +266,7 @@ export function SettingsPage() {
               required
               maxLength={17}
               placeholder=".tracktionedit"
-              className="h-10 w-full rounded-xl border border-white/[0.08] bg-black/20 px-3 text-sm text-stone-200 outline-none placeholder:text-stone-700 focus:border-orange-400/40"
+              className="h-11 w-full rounded-xl border border-white/[0.08] bg-black/20 px-3 text-sm text-stone-200 outline-none placeholder:text-stone-500 focus:border-orange-400/40"
             />
           </label>
           <label>
@@ -233,13 +279,13 @@ export function SettingsPage() {
               required
               maxLength={80}
               placeholder="Waveform"
-              className="h-10 w-full rounded-xl border border-white/[0.08] bg-black/20 px-3 text-sm text-stone-200 outline-none placeholder:text-stone-700 focus:border-orange-400/40"
+              className="h-11 w-full rounded-xl border border-white/[0.08] bg-black/20 px-3 text-sm text-stone-200 outline-none placeholder:text-stone-500 focus:border-orange-400/40"
             />
           </label>
           <button
             type="submit"
             disabled={isSaving}
-            className="mt-auto inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 text-xs font-semibold text-stone-950 hover:bg-orange-400 disabled:cursor-wait disabled:opacity-50"
+            className="mt-auto inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 text-xs font-semibold text-stone-950 hover:bg-orange-400 disabled:cursor-wait disabled:opacity-50"
           >
             {isSaving ? (
               <LoaderCircle className="size-3.5 animate-spin" />
