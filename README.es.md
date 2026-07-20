@@ -2,85 +2,138 @@
 
 [English version](README.md)
 
-Chilli Beat es una biblioteca de escritorio multiplataforma para localizar y
-organizar proyectos de producción musical sin mover los archivos originales.
+Chilli Beat es un espacio de trabajo de escritorio, local-first, para productores musicales que necesitan organizar proyectos de distintos DAWs, comparar audio rápidamente, recuperar contexto y terminar más música.
 
-El proyecto incluye actualmente **las seis fases planificadas del MVP**.
+Indexa sesiones existentes sin reubicarlas, mantiene backups y versiones relacionadas dentro del proyecto correcto y genera paquetes portables para colaboración sin prometer conversiones perfectas entre formatos propietarios.
 
-## Funciones actuales
+> Estado actual: beta de escritorio en desarrollo activo. El flujo verificado actualmente es Windows; la arquitectura también permite compilar para macOS y Linux.
 
-- Aplicación Tauri 2 con React, TypeScript estricto y Vite.
-- Interfaz oscura y responsive construida con Tailwind CSS e iconos Lucide.
-- Navegación con React Router y stores pequeños de Zustand.
-- SQLite administrado por Rust, con migraciones transaccionales, claves
-  foráneas, modo WAL e índices para rutas de proyectos.
-- Selección explícita de carpetas supervisadas mediante el diálogo nativo.
-- Activar, desactivar y eliminar carpetas sin borrar proyectos indexados ni
-  archivos físicos.
-- Escaneo manual de una carpeta o de todas las carpetas activas.
-- Recorrido recursivo en segundo plano con eventos de progreso y cancelación.
-- Inserción y actualización transaccional de los proyectos detectados.
-- Los proyectos faltantes se marcan solo después de un escaneo completo, nunca
-  después de cancelar.
-- Extensiones integradas y extensiones personalizadas por el usuario.
-- Errores amigables, confirmaciones y notificaciones toast.
-- Biblioteca visual paginada con vistas de tarjetas y tabla.
-- Búsqueda con debounce sobre nombres visuales y nombres originales.
-- Filtros SQLite por DAW, extensión, estado, género, etiquetas y favoritos.
-- Ordenamiento seguro por nombre, modificación, creación, BPM o importación.
-- Vistas de biblioteca para Favoritos, Recientes, DAWs y Estados.
-- Rutas de detalle y editor respaldadas por SQLite, con edición de BPM,
-  tonalidad, género, estado, calificación, notas y etiquetas.
-- Acciones de favoritos desde la biblioteca y el detalle.
-- Selección explícita de portada, carga diferida y caché en memoria.
-- Apertura segura del proyecto, su carpeta y ubicación en el explorador.
-- El renombrado físico está aislado tras una confirmación y conserva la
-  extensión; editar el nombre visual nunca renombra el archivo original.
-- Vista de archivos asociados para stems, mixes, masters, previews,
-  referencias, artwork, MIDI, presets, samples y otros.
-- Selección explícita múltiple, clasificación, apertura y eliminación de la
-  asociación sin modificar los originales físicos.
-- Selector y reproductor WAV, MP3, FLAC y OGG con reproducción, pausa,
-  progreso, duración y volumen.
-- Carpetas editables para stems, mixes, masters y referencias, con apertura
-  directa y sin mover archivos automáticamente.
-- Historial paginado con métricas de creados, actualizados, movidos, faltantes
-  y entradas ilegibles.
-- Reconciliación conservadora de proyectos movidos que conserva los metadatos
-  cuando existe una pareja antigua/nueva única.
-- Rutas secundarias con carga diferida, miniaturas 640×400 generadas por Rust y
-  caché de miniaturas acotada y sensible al viewport.
+## Por qué existe Chilli Beat
 
-## Formatos compatibles
+Una carpeta llena de archivos `.flp`, `.als`, `.rpp` y rebotes de audio indica dónde están las cosas. No explica cuál versión importa, qué está bloqueando una canción, qué mezcla suena más fuerte o qué necesita un colaborador.
+
+Chilli Beat añade ese contexto de producción manteniendo al sistema de archivos y al DAW como fuente de verdad.
+
+## Funciones principales
+
+### Una biblioteca para distintos DAWs
+
+- Indexación recursiva de carpetas elegidas sin escanear discos completos.
+- Búsqueda, filtros, ordenamiento, favoritos y paginación para bibliotecas grandes.
+- BPM, tonalidad, género, estado, calificación, etiquetas, notas, artwork e historial de modificación.
+- Extensiones de proyecto integradas y personalizables.
+- Reconciliación conservadora de proyectos movidos sin perder metadatos locales.
+
+### Backups y versiones
+
+- Detección de backups y copias explícitas como `backup`, `autosave`, `copy` y los archivos `overwritten at` de FL Studio.
+- Agrupación automática de coincidencias de alta confianza dentro del proyecto principal.
+- Revisión manual para versiones ambiguas numeradas, como `v2`.
+- Acciones para abrir, mostrar, separar, confirmar o promover una versión sin modificar el archivo del DAW.
+
+### Workspaces administrados
+
+Al crear un proyecto se elige nombre, ubicación, DAW y una plantilla real opcional. Chilli Beat detecta instalaciones comunes de DAWs y prepara una estructura neutral:
+
+```text
+Nombre del proyecto/
+├── Project Files/
+├── Audio/
+│   ├── Stems/
+│   ├── Mixes/
+│   └── Masters/
+├── MIDI/
+├── References/
+├── Artwork/
+├── Handoffs/
+└── Project Info.json
+```
+
+Chilli Beat nunca fabrica un archivo propietario. Si se selecciona una plantilla, copia el archivo real dentro de `Project Files`; sin plantilla, el workspace espera el primer guardado del DAW y lo vincula durante el siguiente escaneo.
+
+### Flujo de audio persistente
+
+- La reproducción continúa al navegar entre la biblioteca y las vistas del proyecto.
+- Cola básica de reproducción persistente.
+- Asociación de stems, mezclas, masters, previews, referencias, MIDI, presets, samples y artwork.
+- Comparación A/B de dos pistas con compensación de nivel.
+- Análisis de duración, sample rate, bit depth, canales, LUFS integrado, rango de sonoridad, true peak y forma de onda resumida.
+- Preview de WAV, MP3, FLAC y OGG sin convertir los originales.
+
+### Finish Mode
+
+Finish Mode transforma una colección de ideas abandonadas en una cola accionable:
+
+- Resumen de proyectos activos, estancados, sin preview, en mezcla y casi terminados.
+- Checklist para estructura, grabación, edición, mezcla, master, artwork y distribución.
+- Próxima acción, fecha objetivo, prioridad, bloqueo actual y hasta tres proyectos foco.
+- Espacio de cierre dentro de cada proyecto, conectado con la biblioteca.
+
+### Universal Handoff Package
+
+Chilli Beat no promete una conversión imposible entre DAWs. En su lugar genera un paquete neutral, verificable y versionado:
+
+```text
+Proyecto — Handoff v1/
+├── Audio/
+│   ├── Stems/
+│   │   ├── Wet/
+│   │   ├── Dry/
+│   │   └── Neutral/
+│   ├── Mixes/
+│   └── Masters/
+├── MIDI/
+├── References/
+├── Preview/
+├── Artwork/
+├── Project Files/
+├── Project Info.json
+├── Checksums.sha256
+└── README.pdf
+```
+
+La exportación puede incluir el proyecto original, archivos asociados, variantes con efectos/sin efectos/sin clasificar, BPM, tonalidad, compás, punto de inicio común, versión del DAW, plugins, notas para el colaborador, metadatos técnicos de audio, versión incremental y verificación SHA-256. Los archivos fuente se copian; nunca se mueven ni reescriben.
+
+## Formatos de proyecto compatibles
 
 | Extensión | DAW |
 | --- | --- |
-| .flp | FL Studio |
-| .als | Ableton Live |
-| .rpp | REAPER |
-| .cpr | Cubase |
-| .song | Studio One |
-| .ptx | Pro Tools |
-| .logicx | Logic Pro |
-| .band | GarageBand |
-| .reason | Reason |
+| `.flp` | FL Studio |
+| `.als` | Ableton Live |
+| `.rpp` | REAPER |
+| `.cpr` | Cubase |
+| `.song` | Studio One |
+| `.ptx` | Pro Tools |
+| `.logicx` | Logic Pro |
+| `.band` | GarageBand |
+| `.reason` | Reason |
 
-Desde Configuración se pueden crear, desactivar y eliminar extensiones
-alfanuméricas adicionales. Las definiciones integradas permanecen centralizadas
-en Rust.
+Desde Configuración pueden administrarse extensiones alfanuméricas adicionales.
+
+## Local-first y no destructivo
+
+- Los metadatos se guardan localmente en SQLite.
+- No se requiere cuenta ni servicio en la nube.
+- El escaneo comienza únicamente cuando el usuario lo solicita.
+- El escáner no sigue enlaces simbólicos y rechaza raíces completas de disco.
+- Los proyectos y audios existentes no se mueven ni eliminan.
+- Editar el nombre visual nunca renombra el proyecto físico.
+- El renombrado físico está aislado detrás de una acción dedicada y validada.
+- Abrir y mostrar archivos resuelve rutas confiables desde SQLite y verifica que pertenezcan a una carpeta supervisada.
+- Artwork y audio permanecen en el disco; SQLite almacena rutas y metadatos derivados, no blobs multimedia.
+- Los Handoffs se preparan en un directorio temporal y solo se finalizan después de escribir correctamente sus archivos.
 
 ## Tecnologías
 
-- Tauri 2
-- React 19
-- TypeScript
-- Vite 7
-- Rust
-- SQLite mediante rusqlite con SQLite embebido
-- Tailwind CSS 4
-- Zustand 5
-- React Router 7
-- Lucide React
+| Capa | Tecnología |
+| --- | --- |
+| Aplicación de escritorio | Tauri 2 |
+| Interfaz | React 19, TypeScript, Vite 7, Tailwind CSS 4 |
+| Estado y navegación | Zustand 5, React Router 7 |
+| Núcleo nativo | Rust |
+| Base de datos | SQLite mediante `rusqlite` embebido |
+| Análisis de audio | Symphonia y EBU R128 |
+| Iconos | Lucide React |
 
 No se utiliza Electron.
 
@@ -89,185 +142,69 @@ No se utiliza Electron.
 - Node.js 22 o una versión LTS compatible.
 - pnpm 11.
 - Rust estable.
-- Prerrequisitos de Tauri 2 específicos de cada plataforma:
-  https://v2.tauri.app/start/prerequisites/
+- [Prerrequisitos de Tauri 2](https://v2.tauri.app/start/prerequisites/) para cada plataforma.
 
-En Windows se requieren Microsoft C++ Build Tools y WebView2.
+En Windows también se requieren Microsoft C++ Build Tools y WebView2.
 
-## Instalación y ejecución
+## Desarrollo
 
-    pnpm install
-    pnpm tauri dev
+```powershell
+pnpm install
+pnpm tauri dev
+```
 
-Ejecutar pnpm dev inicia únicamente la interfaz web. Los diálogos nativos,
-comandos Rust y SQLite requieren pnpm tauri dev.
+`pnpm dev` inicia únicamente la interfaz Vite. Los diálogos nativos, comandos Rust, SQLite, validación del sistema de archivos y autorización de audio requieren `pnpm tauri dev`.
 
-Si Windows Application Control bloquea build-scripts generados dentro de
-Documents, utiliza una carpeta permitida para el target de Cargo:
+Si Windows Application Control bloquea archivos de Cargo dentro de `Documents`:
 
-    $env:CARGO_TARGET_DIR="$env:USERPROFILE\.cargo\chilli-beat-target"
-    pnpm tauri dev
+```powershell
+$env:CARGO_TARGET_DIR="$env:USERPROFILE\.cargo\chilli-beat-target"
+pnpm tauri dev
+```
 
-## Funcionamiento del escaneo
-
-1. El usuario selecciona explícitamente una carpeta concreta.
-2. Rust canonicaliza la ruta y comprueba que exista y sea un directorio.
-3. Se rechazan raíces completas de disco.
-4. El escáner recorre de forma recursiva sin seguir enlaces simbólicos.
-5. Las extensiones conocidas y personalizadas activas se comparan sin distinguir
-   mayúsculas.
-6. Los paquetes de Logic Pro y GarageBand se indexan sin recorrer su contenido.
-7. Los resultados se guardan dentro de transacciones SQLite.
-8. Los nombres visuales editables se preservan durante futuros escaneos.
-9. Antes de insertar otra fila, un escaneo completo reconcilia de forma
-   conservadora una pareja única de rutas antigua/nueva con igual nombre,
-   extensión y tamaño.
-10. Las rutas indexadas restantes que desaparecieron se marcan como faltantes.
-11. Cancelar o encontrar entradas ilegibles conserva los descubrimientos
-    accesibles pero omite la reconciliación de movimientos y archivos faltantes.
-
-Ningún escaneo comienza automáticamente.
-
-## Base de datos
-
-La base se crea en el directorio de datos que Tauri resuelve para la plataforma
-actual. Su nombre es chilli-beat.sqlite3.
-
-El esquema contiene:
-
-- projects
-- project_statuses
-- watched_folders
-- tags
-- project_tags
-- project_files
-- project_folders
-- scan_history
-- custom_extensions
-- settings
-- schema_migrations
-
-La migración v2 agrega índices para filtros y ordenamiento. La v3 incorpora
-métricas de reconciliación al historial. La v4 agrega rutas categorizadas de
-carpetas de producción. Las consultas de proyectos e historial son paginadas;
-los filtros usan parámetros enlazados, órdenes permitidos y un máximo de 100
-registros por página.
-
-Los registros que quedan en estado en curso por una interrupción se recuperan
-como fallidos al siguiente arranque, con fecha de finalización y mensaje de
-diagnóstico.
-
-Los archivos de audio y portadas nunca se guardan como blobs de SQLite. En la
-Fase 4 se guarda la ruta de portada y sus bytes se leen bajo demanda.
-
-## Seguridad
-
-- El frontend no tiene permiso de shell.
-- No dispone de permiso ilimitado para el sistema de archivos.
-- La única capability de plugin agregada en Fase 2 es dialog:allow-open.
-- Rust valida cada ruta de carpeta recibida desde el frontend.
-- El escáner no sigue enlaces simbólicos.
-- Se rechazan raíces completas de disco.
-- Los archivos del usuario nunca se mueven ni eliminan. Un proyecto solo puede
-  renombrarse desde la acción dedicada del editor y tras confirmación explícita.
-- Abrir, mostrar y renombrar resuelve la ruta desde el ID guardado en SQLite y
-  comprueba que pertenezca a una carpeta supervisada.
-- La portada se selecciona desde un diálogo nativo controlado por Rust, con
-  formatos raster permitidos y límite de 12 MB.
-- El protocolo asset inicia sin alcance. Rust autoriza una ruta de audio
-  guardada únicamente después de validar proyecto, archivo, existencia y formato.
-- La CSP bloquea fuentes, objetos y frames no declarados.
-
-## Arquitectura
-
-    Interfaz React
-      → servicio Tauri tipado
-      → comando expuesto
-      → servicio de dominio
-      → repositorio
-      → SQLite
-
-Los escaneos largos se ejecutan fuera del hilo de interfaz y envían progreso
-mediante eventos Tauri. SQLite se bloquea únicamente durante operaciones
-transaccionales breves, no mientras se recorre el sistema de archivos. Los
-proyectos se consultan página por página; el frontend no carga la colección
-completa en memoria.
-
-Directorios principales:
-
-    src/
-      components/
-      hooks/
-      pages/
-      services/
-      stores/
-      types/
-      utils/
-
-    src-tauri/src/
-      commands/
-      database/
-      errors/
-      models/
-      platform/
-      repositories/
-      scanner/
-      services/
-      state/
+Si el puerto `1420` ya está ocupado, detén el proceso Vite anterior antes de iniciar otra sesión de desarrollo Tauri.
 
 ## Verificación
 
-    pnpm check
-    pnpm test
-    pnpm build
-    cargo test --manifest-path src-tauri/Cargo.toml
-    pnpm tauri build --bundles nsis
+```powershell
+pnpm check
+pnpm build
+pnpm exec vitest run src
+cargo test --manifest-path src-tauri/Cargo.toml
+pnpm tauri build --bundles nsis
+```
 
-Verificado en Windows el 19 de julio de 2026:
+El código actual está verificado con 16 pruebas frontend y 45 pruebas Rust. Antes de publicar una versión deben repetirse el build y las pruebas en la máquina objetivo.
 
-- Comprobación estricta de TypeScript: correcta.
-- Vitest: 14 pruebas correctas en 4 archivos.
-- Rust: 28 pruebas correctas.
-- Build release optimizado de Tauri: correcto.
-- Creación del instalador NSIS de Windows: correcta.
-- Prueba de arranque release: el proceso inició y permaneció estable.
-- La base real migró al esquema v4 conservando 249 proyectos indexados.
-- Chunk JavaScript inicial final: 283.54 KB (89.46 KB gzip); las pantallas
-  secundarias se generan como chunks diferidos.
+## Arquitectura
 
-Artefacto final de Windows:
+```text
+Página o componente React
+  → servicio frontend tipado
+  → comando Tauri permitido
+  → servicio de dominio Rust
+  → repositorio
+  → SQLite u operación validada del sistema de archivos
+```
 
-    C:\Users\dev-y\.cargo\chilli-beat-target\release\bundle\nsis\Chilli Beat_0.1.0_x64-setup.exe
+Los escaneos y el análisis de audio se ejecutan fuera del hilo de interfaz. El recorrido de archivos ocurre antes de las transacciones breves y las consultas de biblioteca son paginadas.
 
-    Tamaño: 3,295,660 bytes
-    SHA-256: BED2A2CFF3ED7BD37B50FA6CF0333DE2143531633ED5DD7F6E8277FE85A17EE5
-
-El instalador se construyó pero no se instaló automáticamente. La ventana y la
-salida real de audio no se inspeccionaron manualmente. `cargo fmt --check` no
-pudo ejecutarse porque este toolchain no tiene instalado rustfmt.
-
-Si lo requiere Windows Application Control:
-
-    $env:CARGO_TARGET_DIR="$env:USERPROFILE\.cargo\chilli-beat-target"
-    cargo test --manifest-path src-tauri/Cargo.toml
-    pnpm tauri build --bundles nsis
+```text
+src/                 Interfaz React y servicios tipados
+src-tauri/src/       Núcleo Rust, escáner, repositorios y SQLite
+website/             Sitio de presentación del producto
+docs/                Notas históricas de arquitectura
+```
 
 ## Limitaciones conocidas
 
-- El escaneo automático y los watchers están desactivados intencionalmente;
-  cada escaneo continúa siendo una acción explícita.
-- La detección de movimientos es conservadora: nombre, extensión y tamaño deben
-  identificar una única ruta antigua y una única ruta nueva.
-- Los codecs dependen del webview del sistema; no se probó manualmente la salida
-  física de audio en esta ejecución.
-- Se verificaron el release y NSIS en Windows. macOS y Linux deben compilarse y
-  probarse en sus sistemas respectivos.
-- Los estados personalizados son una ampliación futura; los ocho estados del
-  MVP ya están disponibles.
+- Los proyectos se abren con su DAW nativo; Chilli Beat no convierte estructuras propietarias.
+- Un Handoff no puede garantizar routing, automatización, plugins, instrumentos virtuales, presets, sidechain, mapas de tempo ni ediciones específicas del DAW.
+- Los escaneos son explícitos; no existen watchers en tiempo real.
+- La agrupación de backups es conservadora y las coincidencias ambiguas requieren revisión.
+- El soporte efectivo de codecs puede depender del webview del sistema operativo.
+- Windows es el objetivo verificado activamente. Las versiones para macOS y Linux requieren pruebas específicas.
 
-## Documentación por fase
+## Documentación adicional
 
-- [Arquitectura de Fase 3](docs/architecture-phase-3.md)
-- [Arquitectura de Fase 4](docs/architecture-phase-4.md)
-- [Arquitectura de Fase 5](docs/architecture-phase-5.md)
-- [Arquitectura y evidencia de release de Fase 6](docs/architecture-phase-6.md)
+Las notas históricas permanecen en [docs](docs/). Describen hitos anteriores de implementación; este README es la fuente de verdad para el producto actual.
