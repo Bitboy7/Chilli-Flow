@@ -213,6 +213,12 @@ fn marker(candidate: &Candidate) -> Option<Marker> {
         (" - backup", "backup"),
         ("_backup", "backup"),
         (" backup", "backup"),
+        ("(autosaved at", "backup"),
+        (" autosaved at", "backup"),
+        ("(auto-saved at", "backup"),
+        (" auto-saved at", "backup"),
+        (" - autosaved", "backup"),
+        ("_autosaved", "backup"),
         (" - autosave", "backup"),
         ("_autosave", "backup"),
         (" - copy", "copy"),
@@ -395,6 +401,43 @@ mod tests {
         assert_eq!(set.versions[1].confidence.as_deref(), Some("suggested"));
     }
 
+    #[test]
+    fn groups_fl_studio_autosaved_files_under_the_primary_project() {
+        let connection = database();
+        for (name, path) in [
+            ("The Money.flp", "C:/Music/The Money.flp"),
+            (
+                "The Money (autosaved at 10h05).flp",
+                "C:/Music/The Money (autosaved at 10h05).flp",
+            ),
+            (
+                "The Money (autosaved at 9h31).flp",
+                "C:/Music/The Money (autosaved at 9h31).flp",
+            ),
+        ] {
+            connection
+                .execute(
+                    "INSERT INTO projects
+                 (display_name, original_name, file_path, extension, daw)
+                 VALUES (?1, ?1, ?2, '.flp', 'FL Studio')",
+                    params![name, path],
+                )
+                .expect("project");
+        }
+
+        ProjectVersionRepository::classify_discovered(&connection).expect("classify");
+        let set = ProjectVersionRepository::list(&connection, 1).expect("versions");
+        let visible_roots: i64 = connection.query_row(
+            "SELECT COUNT(*) FROM projects WHERE parent_project_id IS NULL",
+            [],
+            |row| row.get(0),
+        ).expect("visible roots");
+
+        assert_eq!(visible_roots, 1);
+        assert_eq!(set.versions.len(), 2);
+        assert!(set.versions.iter().all(|version| version.kind == "backup"));
+        assert!(set.versions.iter().all(|version| version.confidence.as_deref() == Some("high")));
+    }
     #[test]
     fn promotion_keeps_the_project_identity() {
         let mut connection = database();
