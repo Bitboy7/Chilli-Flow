@@ -98,7 +98,7 @@ export function Select({
           }
         }}
         className={[
-          "group flex h-10 w-full items-center justify-between gap-3 rounded-xl border bg-black/20 px-3 text-left text-sm outline-none transition",
+          "group flex h-11 w-full items-center justify-between gap-3 rounded-xl border bg-black/20 px-3 text-left text-sm outline-none transition",
           "border-white/[0.08] text-stone-200 hover:border-orange-400/35 hover:bg-orange-400/[0.045]",
           "focus-visible:border-orange-400/60 focus-visible:ring-2 focus-visible:ring-orange-400/15",
           isOpen ? "border-orange-400/55 bg-orange-400/[0.05] ring-2 ring-orange-400/10" : "",
@@ -180,7 +180,7 @@ export function Select({
                     }
                   }}
                   className={[
-                    "flex min-h-9 w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-left text-xs outline-none transition",
+                    "flex min-h-11 w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-left text-xs outline-none transition",
                     "text-stone-400 hover:bg-orange-500/10 hover:text-orange-100 focus:bg-orange-500/15 focus:text-orange-100",
                     isSelected ? "bg-orange-500/[0.08] text-orange-200" : "",
                   ].join(" ")}

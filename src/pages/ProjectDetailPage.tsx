@@ -31,14 +31,14 @@ export function ProjectDetailPage() {
         </div>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <dl className="grid grid-cols-2 overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.018] sm:grid-cols-4">
         <Metric label="BPM" value={project.bpm?.toString() ?? "—"} />
         <Metric label="Tonalidad" value={project.musicalKey ?? "—"} />
         <Metric label="Género" value={project.genre ?? "—"} />
         <Metric label="Calificación" value={project.rating === null ? "—" : project.rating + " / 5"} icon={<Star className="size-3.5 text-amber-300" />} />
-      </div>
+      </dl>
 
-      <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.65fr)]">
+      <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.65fr)]">
         <section className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5">
           <h2 className="text-sm font-medium text-stone-300">Notas</h2>
           <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-stone-500">{project.notes || "No hay notas para este proyecto."}</p>
@@ -57,7 +57,7 @@ export function ProjectDetailPage() {
         <SystemButton icon={<FolderOpen className="size-4" />} label="Abrir carpeta" disabled={project.isMissing || busy !== null} onClick={() => void runAction("folder", () => openProjectFolder(project.id))} />
       </section>
       {project.folders.stems ? (
-        <button type="button" disabled={busy !== null} onClick={() => void runAction("stems", () => openProjectAssetFolder(project.id, "stems"))} className="mt-2 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-sky-400/15 bg-sky-400/[0.035] text-xs text-sky-200/70 hover:bg-sky-400/[0.07]">
+        <button type="button" disabled={busy !== null} onClick={() => void runAction("stems", () => openProjectAssetFolder(project.id, "stems"))} className="mt-2 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-sky-400/15 bg-sky-400/[0.035] text-xs text-sky-200/70 hover:bg-sky-400/[0.07]">
           <FolderOpen className="size-4" /> Abrir carpeta de stems
         </button>
       ) : null}
@@ -72,7 +72,7 @@ export function ProjectDetailPage() {
   );
 }
 
-function Metric({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }) { return <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4"><p className="text-[0.65rem] uppercase tracking-wider text-stone-600">{label}</p><p className="mt-2 flex items-center gap-2 text-sm font-medium text-stone-200">{icon}{value}</p></div>; }
+function Metric({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }) { return <div className="min-w-0 border-r border-white/[0.07] p-4 last:border-r-0"><dt className="text-[0.68rem] font-medium uppercase tracking-wider text-stone-500">{label}</dt><dd className="mt-2 flex items-center gap-2 truncate text-sm font-medium text-stone-200">{icon}{value}</dd></div>; }
 function Info({ label, value }: { label: string; value: string }) { return <div className="min-w-0"><dt className="text-stone-600">{label}</dt><dd className="mt-1 break-all text-stone-400">{value}</dd></div>; }
-function SystemButton({ icon, label, disabled, onClick }: { icon: React.ReactNode; label: string; disabled: boolean; onClick: () => void }) { return <button type="button" disabled={disabled} onClick={onClick} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/[0.08] text-xs text-stone-400 hover:bg-white/[0.04] hover:text-stone-200 disabled:cursor-not-allowed disabled:opacity-35">{icon}{label}</button>; }
+function SystemButton({ icon, label, disabled, onClick }: { icon: React.ReactNode; label: string; disabled: boolean; onClick: () => void }) { return <button type="button" disabled={disabled} onClick={onClick} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/[0.08] text-xs text-stone-400 hover:bg-white/[0.04] hover:text-stone-200 disabled:cursor-not-allowed disabled:opacity-35">{icon}{label}</button>; }
 function formatBytes(bytes: number) { if (bytes < 1024) return bytes + " B"; const units = ["KB", "MB", "GB"]; let value = bytes / 1024; let index = 0; while (value >= 1024 && index < units.length - 1) { value /= 1024; index += 1; } return value.toFixed(value >= 10 ? 1 : 2) + " " + units[index]; }

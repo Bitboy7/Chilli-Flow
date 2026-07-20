@@ -14,7 +14,7 @@ type GeneratedArtworkData = {
   variant: number;
 };
 
-type ArtworkPalette = {
+export type ArtworkPalette = {
   accent: string;
   background: string;
   foreground: string;
@@ -41,7 +41,7 @@ function seededRandom(seed: number) {
   };
 }
 
-function generateArtworkPalette(seed: string): ArtworkPalette {
+export function generateArtworkPalette(seed: string): ArtworkPalette {
   const colorSeed = hashSeed(`${seed}:color`);
   const baseHue = colorSeed % 360;
   const accentHue = (baseHue + 32 + ((colorSeed >>> 8) % 92)) % 360;
@@ -165,12 +165,14 @@ export function ProjectArtwork({
   compact = false,
   projectId,
   coverPath,
+  onCoverResolved,
 }: {
   daw: string;
   name: string;
   compact?: boolean;
   projectId?: number;
   coverPath?: string | null;
+  onCoverResolved?: (dataUrl: string | null) => void;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [cover, setCover] = useState(() => {
@@ -213,6 +215,10 @@ export function ProjectArtwork({
     observer.observe(element);
     return () => { active = false; observer.disconnect(); };
   }, [coverPath, projectId]);
+
+  useEffect(() => {
+    onCoverResolved?.(cover);
+  }, [cover, onCoverResolved]);
 
   return (
     <div
