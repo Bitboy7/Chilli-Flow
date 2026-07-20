@@ -1,8 +1,6 @@
 import {
-  AudioWaveform,
   Clock3,
   FolderKanban,
-  Gauge,
   Heart,
   History,
   LibraryBig,
@@ -23,8 +21,6 @@ export const primaryNavigation: NavigationItem[] = [
   { label: "Terminar", to: "/finish", icon: ListChecks },
   { label: "Favoritos", to: "/favorites", icon: Heart },
   { label: "Proyectos recientes", to: "/recent", icon: Clock3 },
-  { label: "DAWs", to: "/daws", icon: AudioWaveform },
-  { label: "Estados", to: "/statuses", icon: Gauge },
 ];
 
 export const managementNavigation: NavigationItem[] = [
