@@ -25,3 +25,5 @@ pub use scan_service::ScanService;
 pub use scan_history_service::ScanHistoryService;
 mod audio_analysis_service;
 pub use audio_analysis_service::AudioAnalysisService;
+mod workspace_service;
+pub use workspace_service::WorkspaceService;

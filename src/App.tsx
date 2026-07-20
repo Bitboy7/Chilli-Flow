@@ -13,6 +13,7 @@ const ProjectFilesPage = lazy(() => import("./pages/ProjectFilesPage").then((mod
 const ProjectFinishPage = lazy(() => import("./pages/ProjectFinishPage").then((module) => ({ default: module.ProjectFinishPage })));
 const ProjectVersionsPage = lazy(() => import("./pages/ProjectVersionsPage").then((module) => ({ default: module.ProjectVersionsPage })));
 const ProjectWorkspacePage = lazy(() => import("./pages/ProjectWorkspacePage").then((module) => ({ default: module.ProjectWorkspacePage })));
+const NewProjectPage = lazy(() => import("./pages/NewProjectPage").then((module) => ({ default: module.NewProjectPage })));
 const ScanHistoryPage = lazy(() => import("./pages/ScanHistoryPage").then((module) => ({ default: module.ScanHistoryPage })));
 
 export default function App() {
@@ -29,6 +30,7 @@ export default function App() {
         <Route path="/folders" element={<FoldersPage />} />
         <Route path="/scan-history" element={<ScanHistoryPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/projects/new" element={<NewProjectPage />} />
         <Route path="/projects/:projectId" element={<ProjectWorkspacePage />}>
           <Route index element={<ProjectDetailPage />} />
           <Route path="audio" element={<ProjectFilesPage />} />

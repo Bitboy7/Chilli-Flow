@@ -77,6 +77,8 @@ export interface ProjectDetail extends ProjectListItem {
   fileSize: number;
   updatedAt: string;
   folders: ProjectFolderPaths;
+  workspaceRoot: string | null;
+  sourceKind: "scanned" | "managed_pending" | "managed";
 }
 
 export type ProjectFolderCategory = "stems" | "mixes" | "masters" | "references";
@@ -160,4 +162,19 @@ export interface FolderSetupPlan {
   daw: string;
   rootPath: string;
   items: Array<{ category: ProjectFolderCategory; path: string; exists: boolean }>;
+}
+
+export interface DawInstallation {
+  daw: string;
+  extension: string;
+  installed: boolean;
+  executablePath: string | null;
+}
+
+export interface CreateWorkspaceInput {
+  name: string;
+  daw: string;
+  extension: string;
+  parentDirectory: string;
+  templatePath: string | null;
 }

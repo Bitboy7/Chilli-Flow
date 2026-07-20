@@ -43,4 +43,5 @@ export const pageTitles: Record<string, string> = {
   "/folders": "Carpetas supervisadas",
   "/scan-history": "Historial de escaneos",
   "/settings": "Configuración",
+  "/projects/new": "Nuevo proyecto",
 };

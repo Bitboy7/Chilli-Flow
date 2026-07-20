@@ -26,6 +26,8 @@ pub struct ProjectDetail {
     pub indexed_at: String,
     pub updated_at: String,
     pub is_missing: bool,
+    pub workspace_root: Option<String>,
+    pub source_kind: String,
     pub tags: Vec<String>,
     pub folders: ProjectFolderPaths,
 }

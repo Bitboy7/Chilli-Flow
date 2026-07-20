@@ -24,6 +24,10 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::audio_analysis::analyze_project_audio,
             commands::app::get_app_status,
+            commands::workspaces::list_daw_installations,
+            commands::workspaces::select_workspace_parent,
+            commands::workspaces::select_workspace_template,
+            commands::workspaces::create_workspace,
             commands::extensions::get_extension_catalog,
             commands::extensions::add_custom_extension,
             commands::extensions::set_custom_extension_enabled,

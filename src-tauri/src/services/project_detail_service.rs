@@ -104,14 +104,23 @@ impl ProjectDetailService {
     }
 
     pub fn open_project(state: &AppState, project_id: i64) -> AppResult<()> {
+        let detail = Self::get(state, project_id)?;
         let path = authorized_existing_project(state, project_id)?;
-        platform::open_path(&path)
+        super::workspace_service::WorkspaceService::open_managed_or_project(&detail, &path)
     }
 
     pub fn open_project_folder(state: &AppState, project_id: i64) -> AppResult<()> {
+        let detail = Self::get(state, project_id)?;
         let path = authorized_existing_project(state, project_id)?;
-        let folder = path.parent().ok_or_else(|| AppError::InvalidProject("ruta sin carpeta padre".into()))?;
-        platform::open_path(folder)
+        if let Some(root) = detail.workspace_root {
+            let root = dunce::canonicalize(root).map_err(AppError::FileOperation)?;
+            platform::open_path(&root)
+        } else {
+            let folder = path.parent().ok_or_else(|| {
+                AppError::InvalidProject("ruta sin carpeta padre".into())
+            })?;
+            platform::open_path(folder)
+        }
     }
 
     pub fn reveal_project(state: &AppState, project_id: i64) -> AppResult<()> {

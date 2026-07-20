@@ -16,7 +16,7 @@ impl ProjectDetailRepository {
                         p.musical_key, p.genre, p.status, ps.label, ps.color,
                         p.rating, p.notes, p.is_favorite, p.file_size,
                         p.file_created_at, p.file_modified_at, p.indexed_at,
-                        p.updated_at, p.is_missing,
+                        p.updated_at, p.is_missing, p.workspace_root, p.source_kind,
                         COALESCE((
                           SELECT group_concat(name, char(31)) FROM (
                             SELECT t.name AS name FROM project_tags pt
@@ -203,7 +203,7 @@ fn ensure_changed(changed: usize) -> AppResult<()> {
 }
 
 fn map_project_detail(row: &rusqlite::Row<'_>) -> rusqlite::Result<ProjectDetail> {
-    let tags: String = row.get(23)?;
+    let tags: String = row.get(25)?;
     Ok(ProjectDetail {
         id: row.get(0)?,
         display_name: row.get(1)?,
@@ -228,6 +228,8 @@ fn map_project_detail(row: &rusqlite::Row<'_>) -> rusqlite::Result<ProjectDetail
         indexed_at: row.get(20)?,
         updated_at: row.get(21)?,
         is_missing: row.get::<_, i64>(22)? != 0,
+        workspace_root: row.get(23)?,
+        source_kind: row.get(24)?,
         tags: if tags.is_empty() {
             Vec::new()
         } else {

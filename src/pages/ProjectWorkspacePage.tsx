@@ -1,4 +1,4 @@
-import { ArrowLeft, CircleAlert, FilePenLine, Heart, History, Layers3, LayoutDashboard, ListChecks, LoaderCircle } from "lucide-react";
+import { ArrowLeft, CircleAlert, FilePenLine, Heart, History, Info, Layers3, LayoutDashboard, ListChecks, LoaderCircle } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useParams } from "react-router-dom";
 
@@ -83,6 +83,15 @@ export function ProjectWorkspacePage() {
           </Link>
         </div>
       </header>
+
+      {project.sourceKind === "managed_pending" ? (
+        <div role="status" className="mt-4 flex items-start gap-3 rounded-xl border border-sky-400/15 bg-sky-400/[0.05] px-4 py-3">
+          <Info className="mt-0.5 size-4 shrink-0 text-sky-300" />
+          <p className="text-xs leading-5 text-sky-100/70">
+            Workspace preparado. Guarda el primer archivo de {project.daw} dentro de <span className="font-medium text-sky-100">Project Files</span> y ejecuta un escaneo para vincularlo automáticamente.
+          </p>
+        </div>
+      ) : null}
 
       <nav className="mt-4 flex gap-1 rounded-xl border border-white/[0.07] bg-black/10 p-1" aria-label="Secciones del proyecto">
         <WorkspaceTab to={"/projects/" + project.id} end icon={<LayoutDashboard className="size-4" />}>Resumen</WorkspaceTab>

@@ -118,7 +118,8 @@ mod tests {
             status: "idea".into(), status_label: "Idea".into(), status_color: None, rating: None,
             notes: None, is_favorite: false, file_size: 0, file_created_at: None,
             file_modified_at: None, indexed_at: String::new(), updated_at: String::new(),
-            is_missing: false, tags: Vec::new(), folders: ProjectFolderPaths::default(),
+            is_missing: false, workspace_root: None, source_kind: "scanned".into(),
+            tags: Vec::new(), folders: ProjectFolderPaths::default(),
         }
     }
 

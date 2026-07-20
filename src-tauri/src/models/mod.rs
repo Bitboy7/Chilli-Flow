@@ -11,6 +11,7 @@ mod project_version;
 mod playback;
 mod scan;
 mod watched_folder;
+mod workspace;
 
 pub use app_status::AppStatus;
 pub use custom_extension::{CustomExtension, ExtensionCatalogItem};
@@ -35,3 +36,4 @@ pub use playback::{
 pub use scan::{ScanFinished, ScanHistoryEntry, ScanHistoryPage, ScanProgress, ScanSession};
 pub use watched_folder::WatchedFolder;
 pub use audio_analysis::{AudioAnalysis, CachedAudioAnalysis};
+pub use workspace::{CreateWorkspaceInput, DawInstallation};
