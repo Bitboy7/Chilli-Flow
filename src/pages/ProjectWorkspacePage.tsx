@@ -8,7 +8,10 @@ import { useToastStore } from "../stores/toast-store";
 import type { ProjectDetail } from "../types/projects";
 import { errorMessage } from "../utils/errors";
 
-export type ProjectWorkspaceContext = { project: ProjectDetail };
+export type ProjectWorkspaceContext = {
+  project: ProjectDetail;
+  setProject: React.Dispatch<React.SetStateAction<ProjectDetail | null>>;
+};
 
 export function ProjectWorkspacePage() {
   const projectId = Number(useParams().projectId);
@@ -86,7 +89,7 @@ export function ProjectWorkspacePage() {
         <WorkspaceTab to={"/projects/" + project.id + "/audio"} icon={<Layers3 className="size-4" />}>Audio y archivos</WorkspaceTab>
       </nav>
 
-      <Outlet context={{ project } satisfies ProjectWorkspaceContext} />
+      <Outlet context={{ project, setProject } satisfies ProjectWorkspaceContext} />
     </div>
   );
 }

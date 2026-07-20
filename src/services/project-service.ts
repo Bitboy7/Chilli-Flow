@@ -3,6 +3,7 @@ import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import type {
   AudioAnalysis,
   CoverAsset,
+  FolderSetupPlan,
   ProjectDetail,
   ProjectFacets,
   ProjectFile,
@@ -117,4 +118,12 @@ export function clearProjectAssetFolder(projectId: number, category: ProjectFold
 
 export function openProjectAssetFolder(projectId: number, category: ProjectFolderCategory): Promise<void> {
   return invoke<void>("open_project_asset_folder", { projectId, category });
+}
+
+export function previewProjectFolderSetup(projectId: number): Promise<FolderSetupPlan> {
+  return invoke<FolderSetupPlan>("preview_project_folder_setup", { projectId });
+}
+
+export function applyProjectFolderSetup(projectId: number, token: number): Promise<ProjectDetail> {
+  return invoke<ProjectDetail>("apply_project_folder_setup", { projectId, token });
 }

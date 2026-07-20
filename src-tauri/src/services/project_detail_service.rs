@@ -159,7 +159,7 @@ impl ProjectDetailService {
     }
 }
 
-fn authorized_existing_project(state: &AppState, project_id: i64) -> AppResult<PathBuf> {
+pub(crate) fn authorized_existing_project(state: &AppState, project_id: i64) -> AppResult<PathBuf> {
     let (detail, watched_paths) = {
         let connection = state.database().connection()?;
         (

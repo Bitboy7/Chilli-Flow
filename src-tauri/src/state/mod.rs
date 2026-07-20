@@ -9,6 +9,7 @@ use std::{
 use crate::{
     database::Database,
     errors::{AppError, AppResult},
+    models::FolderSetupPlan,
 };
 
 pub struct ScanCoordinator {
@@ -62,6 +63,30 @@ impl ScanCoordinator {
 pub struct AppState {
     database: Database,
     scans: ScanCoordinator,
+    folder_plans: FolderPlanCoordinator,
+}
+
+pub struct FolderPlanCoordinator {
+    next_token: AtomicU64,
+    plans: Mutex<HashMap<u64, FolderSetupPlan>>,
+}
+
+impl FolderPlanCoordinator {
+    fn new() -> Self {
+        Self { next_token: AtomicU64::new(1), plans: Mutex::new(HashMap::new()) }
+    }
+
+    pub fn store(&self, mut plan: FolderSetupPlan) -> AppResult<FolderSetupPlan> {
+        let token = self.next_token.fetch_add(1, Ordering::Relaxed);
+        plan.token = token;
+        self.plans.lock().map_err(|_| AppError::FolderPlanStateLock)?.insert(token, plan.clone());
+        Ok(plan)
+    }
+
+    pub fn take(&self, token: u64) -> AppResult<FolderSetupPlan> {
+        self.plans.lock().map_err(|_| AppError::FolderPlanStateLock)?
+            .remove(&token).ok_or(AppError::FolderPlanNotFound)
+    }
 }
 
 impl AppState {
@@ -69,6 +94,7 @@ impl AppState {
         Self {
             database,
             scans: ScanCoordinator::new(),
+            folder_plans: FolderPlanCoordinator::new(),
         }
     }
 
@@ -78,5 +104,9 @@ impl AppState {
 
     pub fn scans(&self) -> &ScanCoordinator {
         &self.scans
+    }
+
+    pub fn folder_plans(&self) -> &FolderPlanCoordinator {
+        &self.folder_plans
     }
 }

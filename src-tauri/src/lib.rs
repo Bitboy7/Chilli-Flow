@@ -28,6 +28,8 @@ pub fn run() {
             commands::extensions::add_custom_extension,
             commands::extensions::set_custom_extension_enabled,
             commands::extensions::remove_custom_extension,
+            commands::folder_setup::preview_project_folder_setup,
+            commands::folder_setup::apply_project_folder_setup,
             commands::folders::list_watched_folders,
             commands::folders::add_watched_folder,
             commands::folders::set_watched_folder_enabled,

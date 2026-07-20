@@ -132,3 +132,11 @@ export interface AudioAnalysis {
   analyzedAt: string;
   fromCache: boolean;
 }
+
+export interface FolderSetupPlan {
+  token: number;
+  projectId: number;
+  daw: string;
+  rootPath: string;
+  items: Array<{ category: ProjectFolderCategory; path: string; exists: boolean }>;
+}

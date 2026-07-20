@@ -1,17 +1,18 @@
 import {
-  Activity, ExternalLink, FileAudio, FilePlus2, Files, ListPlus, LoaderCircle, Play, Trash2,
+  Activity, Check, ExternalLink, FileAudio, FilePlus2, Files, FolderTree, ListPlus, LoaderCircle, Play, Trash2, X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 
 import {
-  analyzeProjectAudio, listProjectFiles, openProjectFile, playableTrack,
+  analyzeProjectAudio, applyProjectFolderSetup, listProjectFiles, openProjectFile, playableTrack,
+  previewProjectFolderSetup,
   removeProjectFile, selectProjectFiles, setProjectPreview,
   setProjectFileCategory,
 } from "../services/project-service";
 import { usePlaybackStore } from "../stores/playback-store";
 import { useToastStore } from "../stores/toast-store";
-import type { AudioAnalysis, ProjectFile, ProjectFileCategory } from "../types/projects";
+import type { AudioAnalysis, FolderSetupPlan, ProjectFile, ProjectFileCategory } from "../types/projects";
 import { errorMessage } from "../utils/errors";
 import type { ProjectWorkspaceContext } from "./ProjectWorkspacePage";
 
@@ -25,7 +26,7 @@ const categories: { value: ProjectFileCategory; label: string }[] = [
 const audioTypes = new Set(["wav", "mp3", "flac", "ogg"]);
 
 export function ProjectFilesPage() {
-  const { project } = useOutletContext<ProjectWorkspaceContext>();
+  const { project, setProject } = useOutletContext<ProjectWorkspaceContext>();
   const projectId = project.id;
   const pushToast = useToastStore((state) => state.push);
   const playTrack = usePlaybackStore((state) => state.playTrack);
@@ -38,6 +39,8 @@ export function ProjectFilesPage() {
   const [busy, setBusy] = useState(false);
   const [analyzingId, setAnalyzingId] = useState<number | null>(null);
   const [analyses, setAnalyses] = useState<Record<number, AudioAnalysis>>({});
+  const [folderPlan, setFolderPlan] = useState<FolderSetupPlan | null>(null);
+  const [folderBusy, setFolderBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -111,6 +114,25 @@ export function ProjectFilesPage() {
     } finally {
       setAnalyzingId(null);
     }
+  };
+
+  const previewFolders = async () => {
+    setFolderBusy(true);
+    try { setFolderPlan(await previewProjectFolderSetup(projectId)); }
+    catch (cause) { pushToast({ kind: "error", title: "No se pudo preparar la estructura", description: errorMessage(cause) }); }
+    finally { setFolderBusy(false); }
+  };
+
+  const applyFolders = async () => {
+    if (!folderPlan) return;
+    setFolderBusy(true);
+    try {
+      const updated = await applyProjectFolderSetup(projectId, folderPlan.token);
+      setProject(updated);
+      setFolderPlan(null);
+      pushToast({ kind: "success", title: "Estructura preparada", description: "Solo se crearon carpetas; no se movió ningún archivo." });
+    } catch (cause) { pushToast({ kind: "error", title: "No se pudo crear la estructura", description: errorMessage(cause) }); }
+    finally { setFolderBusy(false); }
   };
 
   if (isLoading) return <div className="grid min-h-64 place-items-center"><LoaderCircle className="size-6 animate-spin text-orange-300" /></div>;
@@ -193,6 +215,43 @@ export function ProjectFilesPage() {
           </div>
         )}
       </section>
+
+      <section className="mt-7 rounded-2xl border border-white/[0.07] bg-white/[0.015] p-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="flex items-center gap-2 text-sm font-medium text-stone-300"><FolderTree className="size-4 text-orange-300" /> Estructura opcional del proyecto</h2>
+            <p className="mt-2 max-w-2xl text-xs leading-5 text-stone-500">Prepara carpetas para stems, mezclas, masters y referencias respetando la organización habitual de {project.daw}. Nunca mueve archivos existentes.</p>
+          </div>
+          <button type="button" disabled={folderBusy} onClick={() => void previewFolders()} className="inline-flex h-9 items-center gap-2 rounded-xl border border-white/[0.08] px-3.5 text-xs text-stone-300 hover:bg-white/[0.04] disabled:opacity-40">
+            {folderBusy && !folderPlan ? <LoaderCircle className="size-4 animate-spin" /> : <FolderTree className="size-4" />} Ver propuesta
+          </button>
+        </div>
+
+        {folderPlan ? (
+          <div className="mt-4 overflow-hidden rounded-xl border border-white/[0.07] bg-black/10">
+            <div className="border-b border-white/[0.06] px-4 py-3">
+              <p className="text-[0.6rem] uppercase tracking-wider text-stone-600">Raíz</p>
+              <p className="mt-1 break-all text-xs text-stone-400">{folderPlan.rootPath}</p>
+            </div>
+            <ul className="divide-y divide-white/[0.055]">
+              {folderPlan.items.map((item) => (
+                <li key={item.category} className="flex items-center gap-3 px-4 py-2.5">
+                  {item.exists ? <Check className="size-3.5 text-emerald-400" /> : <span className="size-3.5 rounded border border-stone-600" />}
+                  <span className="w-20 text-[0.62rem] font-medium uppercase text-stone-500">{folderLabel(item.category)}</span>
+                  <span className="min-w-0 flex-1 truncate text-xs text-stone-400">{item.path}</span>
+                  <span className="text-[0.6rem] text-stone-600">{item.exists ? "Ya existe" : "Se creará"}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="flex justify-end gap-2 border-t border-white/[0.06] p-3">
+              <button type="button" disabled={folderBusy} onClick={() => setFolderPlan(null)} className="inline-flex h-9 items-center gap-2 rounded-xl px-3 text-xs text-stone-500 hover:bg-white/[0.04] hover:text-stone-300"><X className="size-3.5" /> Cancelar</button>
+              <button type="button" disabled={folderBusy} onClick={() => void applyFolders()} className="inline-flex h-9 items-center gap-2 rounded-xl bg-orange-500 px-4 text-xs font-semibold text-stone-950 hover:bg-orange-400 disabled:opacity-40">
+                {folderBusy ? <LoaderCircle className="size-4 animate-spin" /> : <Check className="size-4" />} Confirmar y crear
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </section>
     </div>
   );
 }
@@ -222,3 +281,4 @@ function AudioMetrics({ analysis }: { analysis: AudioAnalysis }) {
 
 function formatMetric(value: number | null, suffix: string) { return value === null ? "—" : value.toFixed(1) + suffix; }
 function formatDuration(seconds: number) { return Math.floor(seconds / 60) + ":" + Math.floor(seconds % 60).toString().padStart(2, "0"); }
+function folderLabel(category: string) { return ({ stems: "Stems", mixes: "Mezclas", masters: "Masters", references: "Referencias" } as Record<string, string>)[category] ?? category; }

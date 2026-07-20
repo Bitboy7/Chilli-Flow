@@ -28,6 +28,10 @@ pub enum AppError {
     WatchedFolderAlreadyExists,
     #[error("No se pudo acceder al estado del escáner")]
     ScanStateLock,
+    #[error("No se pudo acceder al plan de carpetas")]
+    FolderPlanStateLock,
+    #[error("La vista previa de carpetas expiró; genera una nueva")]
+    FolderPlanNotFound,
     #[error("No existe un escaneo activo con ese identificador")]
     ScanNotFound,
     #[error("Ya hay un escaneo en curso")]

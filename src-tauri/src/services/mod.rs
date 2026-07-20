@@ -1,5 +1,6 @@
 mod app_service;
 mod extension_service;
+mod folder_setup_service;
 mod folder_service;
 mod library_service;
 mod project_detail_service;
@@ -10,6 +11,7 @@ mod scan_history_service;
 
 pub use app_service::AppService;
 pub use extension_service::ExtensionService;
+pub use folder_setup_service::FolderSetupService;
 pub use folder_service::FolderService;
 pub use library_service::LibraryService;
 pub use project_detail_service::ProjectDetailService;
