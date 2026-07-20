@@ -9,6 +9,7 @@ const SettingsPage = lazy(() => import("./pages/SettingsPage").then((module) => 
 const ProjectDetailPage = lazy(() => import("./pages/ProjectDetailPage").then((module) => ({ default: module.ProjectDetailPage })));
 const ProjectEditorPage = lazy(() => import("./pages/ProjectEditorPage").then((module) => ({ default: module.ProjectEditorPage })));
 const ProjectFilesPage = lazy(() => import("./pages/ProjectFilesPage").then((module) => ({ default: module.ProjectFilesPage })));
+const ProjectWorkspacePage = lazy(() => import("./pages/ProjectWorkspacePage").then((module) => ({ default: module.ProjectWorkspacePage })));
 const ScanHistoryPage = lazy(() => import("./pages/ScanHistoryPage").then((module) => ({ default: module.ScanHistoryPage })));
 
 export default function App() {
@@ -24,9 +25,12 @@ export default function App() {
         <Route path="/folders" element={<FoldersPage />} />
         <Route path="/scan-history" element={<ScanHistoryPage />} />
         <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
+        <Route path="/projects/:projectId" element={<ProjectWorkspacePage />}>
+          <Route index element={<ProjectDetailPage />} />
+          <Route path="audio" element={<ProjectFilesPage />} />
+          <Route path="files" element={<Navigate to="../audio" replace />} />
+        </Route>
         <Route path="/projects/:projectId/edit" element={<ProjectEditorPage />} />
-        <Route path="/projects/:projectId/files" element={<ProjectFilesPage />} />
         <Route path="*" element={<Navigate to="/library" replace />} />
       </Route>
     </Routes>

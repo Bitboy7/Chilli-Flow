@@ -1,19 +1,19 @@
 import {
-  ArrowLeft, CircleAlert, ExternalLink, FileAudio, FilePlus2,
-  Files, ListPlus, LoaderCircle, Play, Trash2,
+  ExternalLink, FileAudio, FilePlus2, Files, ListPlus, LoaderCircle, Play, Trash2,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useOutletContext } from "react-router-dom";
 
 import {
-  getProject, listProjectFiles, openProjectFile, playableTrack,
+  listProjectFiles, openProjectFile, playableTrack,
   removeProjectFile, selectProjectFiles, setProjectPreview,
   setProjectFileCategory,
 } from "../services/project-service";
 import { usePlaybackStore } from "../stores/playback-store";
 import { useToastStore } from "../stores/toast-store";
-import type { ProjectDetail, ProjectFile, ProjectFileCategory } from "../types/projects";
+import type { ProjectFile, ProjectFileCategory } from "../types/projects";
 import { errorMessage } from "../utils/errors";
+import type { ProjectWorkspaceContext } from "./ProjectWorkspacePage";
 
 const categories: { value: ProjectFileCategory; label: string }[] = [
   { value: "stem", label: "Stem" }, { value: "mix", label: "Mix" },
@@ -25,11 +25,11 @@ const categories: { value: ProjectFileCategory; label: string }[] = [
 const audioTypes = new Set(["wav", "mp3", "flac", "ogg"]);
 
 export function ProjectFilesPage() {
-  const projectId = Number(useParams().projectId);
+  const { project } = useOutletContext<ProjectWorkspaceContext>();
+  const projectId = project.id;
   const pushToast = useToastStore((state) => state.push);
   const playTrack = usePlaybackStore((state) => state.playTrack);
   const addToQueue = usePlaybackStore((state) => state.addToQueue);
-  const [project, setProject] = useState<ProjectDetail | null>(null);
   const [files, setFiles] = useState<ProjectFile[]>([]);
   const [category, setCategory] = useState<ProjectFileCategory>("stem");
   const [previewId, setPreviewId] = useState<number | null>(null);
@@ -38,22 +38,21 @@ export function ProjectFilesPage() {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    if (!Number.isSafeInteger(projectId) || projectId <= 0) { setError("Identificador de proyecto no válido."); setIsLoading(false); return; }
     try {
-      const [detail, associated] = await Promise.all([getProject(projectId), listProjectFiles(projectId)]);
-      setProject(detail); setFiles(associated);
-      setPreviewId(associated.find((file) => file.filePath === detail.previewPath)?.id ?? null);
+      const associated = await listProjectFiles(projectId);
+      setFiles(associated);
+      setPreviewId(associated.find((file) => file.filePath === project.previewPath)?.id ?? null);
       setError(null);
     } catch (cause) { setError(errorMessage(cause)); }
     finally { setIsLoading(false); }
-  }, [projectId]);
+  }, [project.previewPath, projectId]);
 
   useEffect(() => { void load(); }, [load]);
 
   const audioFiles = useMemo(() => files.filter((file) => audioTypes.has(file.fileType.toLowerCase()) && !file.isMissing), [files]);
   const selectedPreview = files.find((file) => file.id === previewId) ?? null;
   const playbackContext = useMemo(
-    () => project ? audioFiles.map((file) => playableTrack(project, file)) : [],
+    () => audioFiles.map((file) => playableTrack(project, file)),
     [audioFiles, project],
   );
 
@@ -99,13 +98,12 @@ export function ProjectFilesPage() {
     finally { setBusy(false); }
   };
 
-  if (isLoading) return <div className="grid min-h-96 place-items-center"><LoaderCircle className="size-6 animate-spin text-orange-300" /></div>;
-  if (error || !project) return <div className="mx-auto max-w-xl p-8"><div className="rounded-2xl border border-red-400/20 bg-red-400/[0.05] p-6 text-center"><CircleAlert className="mx-auto size-6 text-red-300" /><p className="mt-3 text-sm text-red-100/70">{error ?? "Proyecto no encontrado"}</p></div></div>;
+  if (isLoading) return <div className="grid min-h-64 place-items-center"><LoaderCircle className="size-6 animate-spin text-orange-300" /></div>;
+  if (error) return <div className="mt-5 rounded-2xl border border-red-400/20 bg-red-400/[0.05] p-5 text-sm text-red-100/70">{error}</div>;
 
   return (
-    <div className="mx-auto w-full max-w-6xl p-5 lg:p-8">
-      <Link to={"/projects/" + project.id} className="inline-flex items-center gap-2 text-xs text-stone-500 hover:text-stone-200"><ArrowLeft className="size-3.5" /> Volver al proyecto</Link>
-      <header className="mt-5"><p className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-orange-400/70">Organización sin mover archivos</p><h1 className="mt-2 text-2xl font-semibold text-stone-100">Archivos de {project.displayName}</h1><p className="mt-2 text-sm text-stone-500">Las rutas se guardan en SQLite; Chilli Beat no copia, mueve ni elimina los originales.</p></header>
+    <div className="pt-5">
+      <header><p className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-orange-400/70">Organización sin mover archivos</p><h2 className="mt-2 text-xl font-semibold text-stone-100">Audio y archivos</h2><p className="mt-2 text-sm text-stone-500">Las rutas se guardan en SQLite; Chilli Beat no copia, mueve ni elimina los originales.</p></header>
 
       <section className="mt-6">
         <div className="mb-2 flex items-center justify-between"><h2 className="text-sm font-medium text-stone-300">Preview de audio</h2><select value={previewId ?? ""} disabled={busy} onChange={(e) => void choosePreview(e.currentTarget.value)} className="h-9 max-w-64 rounded-xl border border-white/[0.08] bg-[#1b1917] px-3 text-xs text-stone-300 outline-none"><option value="">Sin preview</option>{audioFiles.map((file) => <option key={file.id} value={file.id}>{file.fileName}</option>)}</select></div>
