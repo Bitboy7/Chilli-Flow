@@ -1,6 +1,6 @@
 use std::{collections::{HashMap, HashSet}, path::Path};
 
-use rusqlite::{params, Connection};
+use rusqlite::{params, Connection, OptionalExtension};
 
 use crate::{errors::AppResult, models::DiscoveredProject};
 
@@ -110,6 +110,48 @@ impl ProjectRepository {
             )?;
 
             for project in projects {
+                let pending_id: Option<i64> = transaction
+                    .query_row(
+                        "SELECT id FROM projects
+                         WHERE source_kind = 'managed_pending'
+                           AND daw = ?1 COLLATE NOCASE
+                           AND workspace_root IS NOT NULL
+                           AND (
+                             ?2 = workspace_root
+                             OR substr(?2, 1, length(workspace_root) + 1) = workspace_root || '/'
+                             OR substr(?2, 1, length(workspace_root) + 1) = workspace_root || '\\'
+                           )
+                         ORDER BY length(workspace_root) DESC LIMIT 1",
+                        params![project.daw, project.file_path],
+                        |row| row.get(0),
+                    )
+                    .optional()?;
+                if let Some(project_id) = pending_id {
+                    transaction.execute(
+                        "UPDATE projects
+                         SET original_name = ?1, file_path = ?2, extension = ?3, daw = ?4,
+                             file_size = ?5,
+                             file_created_at = CASE WHEN ?6 IS NULL THEN NULL
+                               ELSE strftime('%Y-%m-%dT%H:%M:%fZ', ?6, 'unixepoch') END,
+                             file_modified_at = CASE WHEN ?7 IS NULL THEN NULL
+                               ELSE strftime('%Y-%m-%dT%H:%M:%fZ', ?7, 'unixepoch') END,
+                             source_kind = 'managed', is_missing = 0,
+                             updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+                         WHERE id = ?8",
+                        params![
+                            project.original_name,
+                            project.file_path,
+                            project.extension,
+                            project.daw,
+                            as_i64(project.file_size),
+                            project.file_created_at,
+                            project.file_modified_at,
+                            project_id
+                        ],
+                    )?;
+                    summary.updated += 1;
+                    continue;
+                }
                 let inserted = insert.execute(params![
                     project.display_name,
                     project.original_name,
@@ -348,4 +390,32 @@ mod tests {
             .expect("unchanged paths");
         assert_eq!(unchanged, 2);
     }
+
+    #[test]
+    fn promotes_the_first_daw_save_inside_a_managed_workspace() {
+        let mut connection = database();
+        connection.execute(
+            "INSERT INTO projects
+             (display_name, original_name, file_path, extension, daw, workspace_root, source_kind)
+             VALUES ('Demo', 'Demo (esperando primer guardado)', 'C:/Music/Demo',
+                     '.flp', 'FL Studio', 'C:/Music/Demo', 'managed_pending')",
+            [],
+        ).expect("pending workspace");
+
+        let result = ProjectRepository::upsert_batch(
+            &mut connection,
+            &[project("C:/Music/Demo/Project Files/Demo.flp", 42)],
+        ).expect("promote save");
+
+        let row: (i64, String, String) = connection.query_row(
+            "SELECT COUNT(*), file_path, source_kind FROM projects",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        ).expect("promoted project");
+        assert_eq!(result.updated, 1);
+        assert_eq!(row.0, 1);
+        assert_eq!(row.1, "C:/Music/Demo/Project Files/Demo.flp");
+        assert_eq!(row.2, "managed");
+    }
+
 }

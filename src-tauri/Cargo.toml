@@ -21,12 +21,16 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = ["protocol-asset"] }
 rusqlite = { version = "0.37", features = ["bundled"] }
 serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 tauri-plugin-dialog = "2.7.2"
 thiserror = "2"
 walkdir = "2.5.0"
 dunce = "1.0.5"
+sha2 = "0.10"
 base64 = "0.22.1"
 image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "webp", "gif"] }
+symphonia = { version = "0.6", default-features = false, features = ["flac", "ogg", "vorbis", "wav", "pcm", "mpa"] }
+ebur128 = "0.1.10"
 
 [dev-dependencies]
 tempfile = "3.27.0"

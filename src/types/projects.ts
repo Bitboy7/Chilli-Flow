@@ -77,6 +77,8 @@ export interface ProjectDetail extends ProjectListItem {
   fileSize: number;
   updatedAt: string;
   folders: ProjectFolderPaths;
+  workspaceRoot: string | null;
+  sourceKind: "scanned" | "managed_pending" | "managed";
 }
 
 export type ProjectFolderCategory = "stems" | "mixes" | "masters" | "references";
@@ -93,10 +95,31 @@ export interface UpdateProjectInput {
   bpm: number | null;
   musicalKey: string | null;
   genre: string | null;
+
   status: string;
   rating: number | null;
   notes: string | null;
   tags: string[];
+}
+
+export type ProjectVersionKind = "primary" | "backup" | "copy" | "version";
+export type ProjectVersionConfidence = "high" | "suggested" | "confirmed" | null;
+
+export interface ProjectVersionItem {
+  id: number;
+  fileName: string;
+  filePath: string;
+  kind: ProjectVersionKind;
+  confidence: ProjectVersionConfidence;
+  fileSize: number;
+  fileModifiedAt: string | null;
+  isMissing: boolean;
+}
+
+export interface ProjectVersionSet {
+  projectId: number;
+  primary: ProjectVersionItem;
+  versions: ProjectVersionItem[];
 }
 
 export interface CoverAsset {
@@ -117,4 +140,74 @@ export interface ProjectFile {
   fileSize: number;
   createdAt: string;
   isMissing: boolean;
+}
+
+export interface AudioAnalysis {
+  fileId: number;
+  durationSeconds: number;
+  sampleRate: number;
+  bitDepth: number | null;
+  channels: number;
+  integratedLufs: number | null;
+  loudnessRangeLu: number | null;
+  truePeakDbfs: number | null;
+  waveform: number[];
+  analyzedAt: string;
+  fromCache: boolean;
+}
+
+export interface FolderSetupPlan {
+  token: number;
+  projectId: number;
+  daw: string;
+  rootPath: string;
+  items: Array<{ category: ProjectFolderCategory; path: string; exists: boolean }>;
+}
+
+export interface DawInstallation {
+  daw: string;
+  extension: string;
+  installed: boolean;
+  executablePath: string | null;
+}
+
+export interface CreateWorkspaceInput {
+  name: string;
+  daw: string;
+  extension: string;
+  parentDirectory: string;
+  templatePath: string | null;
+}
+
+export interface HandoffSettings {
+  dawVersion: string | null;
+  timeSignature: string;
+  commonStart: string;
+  collaboratorNotes: string | null;
+  plugins: string[];
+}
+
+export interface HandoffFileSelection {
+  fileId: number;
+  variant: "wet" | "dry" | "neutral";
+}
+
+export interface HandoffPreview {
+  settings: HandoffSettings;
+  files: ProjectFile[];
+  warnings: string[];
+  nextVersion: number;
+}
+
+export interface CreateHandoffInput {
+  settings: HandoffSettings;
+  selections: HandoffFileSelection[];
+  includeProjectFile: boolean;
+  destinationParent: string;
+}
+
+export interface HandoffExportResult {
+  destinationPath: string;
+  versionNumber: number;
+  fileCount: number;
 }

@@ -150,7 +150,7 @@ impl ProjectQueryRepository {
 }
 
 fn filters(query: &ProjectQuery) -> (String, Vec<Value>) {
-    let mut conditions = Vec::new();
+    let mut conditions = vec!["(p.parent_project_id IS NULL OR p.version_confidence = 'suggested')"];
     let mut values = Vec::new();
 
     if let Some(search) = &query.search {

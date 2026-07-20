@@ -1,7 +1,14 @@
 pub mod app;
 pub mod extensions;
+pub mod folder_setup;
+pub mod finish_mode;
+pub mod handoff;
 pub mod folders;
 pub mod library;
 pub mod projects;
 pub mod project_files;
+pub mod project_versions;
+pub mod playback;
 pub mod scanning;
+pub mod audio_analysis;
+pub mod workspaces;

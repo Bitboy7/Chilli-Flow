@@ -4,10 +4,11 @@ import {
   List,
   ScanSearch,
   Search,
+  Plus,
   SlidersHorizontal,
 } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import { useFoldersStore } from "../../stores/folders-store";
 import { useScanStore } from "../../stores/scan-store";
@@ -192,11 +193,15 @@ export function TopBar() {
         onClick={() => void handleImport()}
         disabled={isScanning}
         title="Seleccionar una carpeta"
-        className="inline-flex h-9 items-center gap-2 rounded-lg bg-orange-500 px-3.5 text-xs font-semibold text-stone-950 shadow-[0_6px_24px_rgba(249,115,22,0.16)] disabled:cursor-not-allowed disabled:opacity-60"
+        className="hidden h-9 items-center gap-2 rounded-lg border border-white/[0.07] px-3 text-xs text-stone-400 transition hover:bg-white/[0.04] hover:text-stone-100 disabled:cursor-not-allowed disabled:opacity-60 xl:inline-flex"
       >
         <FolderPlus className="size-3.5" />
         <span className="hidden sm:inline">Importar carpeta</span>
       </button>
+      <Link to="/projects/new" className="inline-flex h-9 items-center gap-2 rounded-lg bg-orange-500 px-3.5 text-xs font-semibold text-stone-950 transition hover:bg-orange-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-400">
+        <Plus className="size-3.5" />
+        <span className="hidden sm:inline">Nuevo proyecto</span>
+      </Link>
     </header>
   );
 }

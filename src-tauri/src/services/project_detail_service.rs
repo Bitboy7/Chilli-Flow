@@ -104,14 +104,23 @@ impl ProjectDetailService {
     }
 
     pub fn open_project(state: &AppState, project_id: i64) -> AppResult<()> {
+        let detail = Self::get(state, project_id)?;
         let path = authorized_existing_project(state, project_id)?;
-        platform::open_path(&path)
+        super::workspace_service::WorkspaceService::open_managed_or_project(&detail, &path)
     }
 
     pub fn open_project_folder(state: &AppState, project_id: i64) -> AppResult<()> {
+        let detail = Self::get(state, project_id)?;
         let path = authorized_existing_project(state, project_id)?;
-        let folder = path.parent().ok_or_else(|| AppError::InvalidProject("ruta sin carpeta padre".into()))?;
-        platform::open_path(folder)
+        if let Some(root) = detail.workspace_root {
+            let root = dunce::canonicalize(root).map_err(AppError::FileOperation)?;
+            platform::open_path(&root)
+        } else {
+            let folder = path.parent().ok_or_else(|| {
+                AppError::InvalidProject("ruta sin carpeta padre".into())
+            })?;
+            platform::open_path(folder)
+        }
     }
 
     pub fn reveal_project(state: &AppState, project_id: i64) -> AppResult<()> {
@@ -159,7 +168,7 @@ impl ProjectDetailService {
     }
 }
 
-fn authorized_existing_project(state: &AppState, project_id: i64) -> AppResult<PathBuf> {
+pub(crate) fn authorized_existing_project(state: &AppState, project_id: i64) -> AppResult<PathBuf> {
     let (detail, watched_paths) = {
         let connection = state.database().connection()?;
         (
@@ -172,7 +181,7 @@ fn authorized_existing_project(state: &AppState, project_id: i64) -> AppResult<P
     Ok(path)
 }
 
-fn authorize_project_path(path: &Path, watched_paths: &[String]) -> AppResult<()> {
+pub(crate) fn authorize_project_path(path: &Path, watched_paths: &[String]) -> AppResult<()> {
     let authorized = watched_paths.iter().any(|watched| {
         dunce::canonicalize(watched)
             .map(|folder| path.starts_with(folder))

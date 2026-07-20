@@ -28,6 +28,10 @@ pub enum AppError {
     WatchedFolderAlreadyExists,
     #[error("No se pudo acceder al estado del escáner")]
     ScanStateLock,
+    #[error("No se pudo acceder al plan de carpetas")]
+    FolderPlanStateLock,
+    #[error("La vista previa de carpetas expiró; genera una nueva")]
+    FolderPlanNotFound,
     #[error("No existe un escaneo activo con ese identificador")]
     ScanNotFound,
     #[error("Ya hay un escaneo en curso")]
@@ -50,4 +54,12 @@ pub enum AppError {
     AssociatedFileNotFound,
     #[error("El archivo seleccionado no es un audio compatible con el preview")]
     UnsupportedAudio,
+    #[error("No se pudo analizar el audio: {0}")]
+    AudioAnalysis(String),
+    #[error("Estado del reproductor no válido: {0}")]
+    InvalidPlaybackSession(String),
+    #[error("Plan para terminar no válido: {0}")]
+    InvalidFinishPlan(String),
+    #[error("No se pudo serializar el estado local: {0}")]
+    Serialization(#[from] serde_json::Error),
 }

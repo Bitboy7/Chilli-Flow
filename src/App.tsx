@@ -5,10 +5,16 @@ import { AppShell } from "./components/layout/AppShell";
 import { LibraryPage } from "./pages/LibraryPage";
 
 const FoldersPage = lazy(() => import("./pages/FoldersPage").then((module) => ({ default: module.FoldersPage })));
+const FinishModePage = lazy(() => import("./pages/FinishModePage").then((module) => ({ default: module.FinishModePage })));
 const SettingsPage = lazy(() => import("./pages/SettingsPage").then((module) => ({ default: module.SettingsPage })));
 const ProjectDetailPage = lazy(() => import("./pages/ProjectDetailPage").then((module) => ({ default: module.ProjectDetailPage })));
 const ProjectEditorPage = lazy(() => import("./pages/ProjectEditorPage").then((module) => ({ default: module.ProjectEditorPage })));
 const ProjectFilesPage = lazy(() => import("./pages/ProjectFilesPage").then((module) => ({ default: module.ProjectFilesPage })));
+const ProjectFinishPage = lazy(() => import("./pages/ProjectFinishPage").then((module) => ({ default: module.ProjectFinishPage })));
+const ProjectVersionsPage = lazy(() => import("./pages/ProjectVersionsPage").then((module) => ({ default: module.ProjectVersionsPage })));
+const ProjectHandoffPage = lazy(() => import("./pages/ProjectHandoffPage").then((module) => ({ default: module.ProjectHandoffPage })));
+const ProjectWorkspacePage = lazy(() => import("./pages/ProjectWorkspacePage").then((module) => ({ default: module.ProjectWorkspacePage })));
+const NewProjectPage = lazy(() => import("./pages/NewProjectPage").then((module) => ({ default: module.NewProjectPage })));
 const ScanHistoryPage = lazy(() => import("./pages/ScanHistoryPage").then((module) => ({ default: module.ScanHistoryPage })));
 
 export default function App() {
@@ -17,6 +23,7 @@ export default function App() {
       <Route element={<AppShell />}>
         <Route index element={<Navigate to="/library" replace />} />
         <Route path="/library" element={<LibraryPage />} />
+        <Route path="/finish" element={<FinishModePage />} />
         <Route path="/favorites" element={<LibraryPage scope="favorites" />} />
         <Route path="/recent" element={<LibraryPage scope="recent" />} />
         <Route path="/daws" element={<LibraryPage scope="daws" />} />
@@ -24,9 +31,16 @@ export default function App() {
         <Route path="/folders" element={<FoldersPage />} />
         <Route path="/scan-history" element={<ScanHistoryPage />} />
         <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
+        <Route path="/projects/new" element={<NewProjectPage />} />
+        <Route path="/projects/:projectId" element={<ProjectWorkspacePage />}>
+          <Route index element={<ProjectDetailPage />} />
+          <Route path="audio" element={<ProjectFilesPage />} />
+          <Route path="finish" element={<ProjectFinishPage />} />
+          <Route path="versions" element={<ProjectVersionsPage />} />
+          <Route path="handoff" element={<ProjectHandoffPage />} />
+          <Route path="files" element={<Navigate to="../audio" replace />} />
+        </Route>
         <Route path="/projects/:projectId/edit" element={<ProjectEditorPage />} />
-        <Route path="/projects/:projectId/files" element={<ProjectFilesPage />} />
         <Route path="*" element={<Navigate to="/library" replace />} />
       </Route>
     </Routes>

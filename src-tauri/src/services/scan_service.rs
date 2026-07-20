@@ -13,7 +13,7 @@ use crate::{
     models::{ScanFinished, ScanProgress, ScanSession, WatchedFolder},
     platform::canonicalize_directory,
     repositories::{
-        CustomExtensionRepository, ProjectRepository, ScanHistoryMetrics, ScanHistoryRepository,
+        CustomExtensionRepository, ProjectRepository, ProjectVersionRepository, ScanHistoryMetrics, ScanHistoryRepository,
         WatchedFolderRepository,
     },
     scanner::{scan_directory, DawCatalog},
@@ -181,6 +181,7 @@ fn run_session(
                 )?
             } else { 0 };
             let upsert = ProjectRepository::upsert_batch(&mut connection, &outcome.projects)?;
+            ProjectVersionRepository::classify_discovered(&connection)?;
             let marked_missing = if can_reconcile {
                 ProjectRepository::mark_missing_in_folder(
                     &mut connection,

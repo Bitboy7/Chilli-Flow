@@ -1,16 +1,20 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 
 import type {
+  AudioAnalysis,
   CoverAsset,
+  FolderSetupPlan,
   ProjectDetail,
   ProjectFacets,
   ProjectFile,
   ProjectFileCategory,
   ProjectFolderCategory,
   ProjectPage,
+  ProjectVersionSet,
   ProjectQuery,
   UpdateProjectInput,
 } from "../types/projects";
+import type { PlayableTrack } from "../types/playback";
 
 export function listProjects(query: ProjectQuery): Promise<ProjectPage> {
   return invoke<ProjectPage>("list_projects", { query });
@@ -84,9 +88,25 @@ export function setProjectPreview(projectId: number, fileId: number | null): Pro
   return invoke<void>("set_project_preview", { projectId, fileId });
 }
 
+export function analyzeProjectAudio(projectId: number, fileId: number): Promise<AudioAnalysis> {
+  return invoke<AudioAnalysis>("analyze_project_audio", { projectId, fileId });
+}
+
 export async function projectAudioUrl(projectId: number, fileId: number): Promise<string> {
   const path = await invoke<string>("authorize_project_audio", { projectId, fileId });
   return convertFileSrc(path);
+}
+
+export function playableTrack(project: ProjectDetail, file: ProjectFile): PlayableTrack {
+  return {
+    projectId: project.id,
+    fileId: file.id,
+    projectName: project.displayName,
+    fileName: file.fileName,
+    fileType: file.fileType,
+    category: file.category,
+    isMissing: file.isMissing,
+  };
 }
 
 export function selectProjectAssetFolder(projectId: number, category: ProjectFolderCategory): Promise<ProjectDetail> {
@@ -99,4 +119,36 @@ export function clearProjectAssetFolder(projectId: number, category: ProjectFold
 
 export function openProjectAssetFolder(projectId: number, category: ProjectFolderCategory): Promise<void> {
   return invoke<void>("open_project_asset_folder", { projectId, category });
+}
+
+export function previewProjectFolderSetup(projectId: number): Promise<FolderSetupPlan> {
+  return invoke<FolderSetupPlan>("preview_project_folder_setup", { projectId });
+}
+
+export function applyProjectFolderSetup(projectId: number, token: number): Promise<ProjectDetail> {
+  return invoke<ProjectDetail>("apply_project_folder_setup", { projectId, token });
+}
+
+export function listProjectVersions(projectId: number): Promise<ProjectVersionSet> {
+  return invoke<ProjectVersionSet>("list_project_versions", { projectId });
+}
+
+export function confirmProjectVersion(projectId: number, versionId: number): Promise<ProjectVersionSet> {
+  return invoke<ProjectVersionSet>("confirm_project_version", { projectId, versionId });
+}
+
+export function detachProjectVersion(projectId: number, versionId: number): Promise<ProjectVersionSet> {
+  return invoke<ProjectVersionSet>("detach_project_version", { projectId, versionId });
+}
+
+export function promoteProjectVersion(projectId: number, versionId: number): Promise<ProjectVersionSet> {
+  return invoke<ProjectVersionSet>("promote_project_version", { projectId, versionId });
+}
+
+export function openProjectVersion(projectId: number, versionId: number): Promise<void> {
+  return invoke<void>("open_project_version", { projectId, versionId });
+}
+
+export function revealProjectVersion(projectId: number, versionId: number): Promise<void> {
+  return invoke<void>("reveal_project_version", { projectId, versionId });
 }
