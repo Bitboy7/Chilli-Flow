@@ -19,7 +19,8 @@ impl LibraryRepository {
             |row| row.get(0),
         )?;
         let project_count = connection.query_row(
-            "SELECT COUNT(*) FROM projects WHERE is_missing = 0",
+            "SELECT COUNT(*) FROM projects
+             WHERE is_missing = 0 AND parent_project_id IS NULL AND version_kind = 'primary'",
             [],
             |row| row.get(0),
         )?;

@@ -93,17 +93,22 @@ impl ProjectQueryRepository {
     pub fn facets(connection: &Connection) -> AppResult<ProjectFacets> {
         let daws = distinct_strings(
             connection,
-            "SELECT DISTINCT daw FROM projects ORDER BY daw COLLATE NOCASE",
+            "SELECT DISTINCT daw FROM projects
+             WHERE parent_project_id IS NULL AND version_kind = 'primary'
+             ORDER BY daw COLLATE NOCASE",
         )?;
         let extensions = distinct_strings(
             connection,
-            "SELECT DISTINCT extension FROM projects ORDER BY extension COLLATE NOCASE",
+            "SELECT DISTINCT extension FROM projects
+             WHERE parent_project_id IS NULL AND version_kind = 'primary'
+             ORDER BY extension COLLATE NOCASE",
         )?;
         let genres = distinct_strings(
             connection,
             "SELECT DISTINCT genre
              FROM projects
-             WHERE genre IS NOT NULL AND trim(genre) <> ''
+             WHERE parent_project_id IS NULL AND version_kind = 'primary'
+               AND genre IS NOT NULL AND trim(genre) <> ''
              ORDER BY genre COLLATE NOCASE",
         )?;
 
@@ -150,7 +155,7 @@ impl ProjectQueryRepository {
 }
 
 fn filters(query: &ProjectQuery) -> (String, Vec<Value>) {
-    let mut conditions = vec!["(p.parent_project_id IS NULL OR p.version_confidence = 'suggested')"];
+    let mut conditions = vec!["p.parent_project_id IS NULL AND p.version_kind = 'primary'"];
     let mut values = Vec::new();
 
     if let Some(search) = &query.search {
@@ -374,6 +379,38 @@ mod tests {
         assert_eq!(page.total_pages, 2);
         assert_eq!(page.items.len(), 1);
         assert_eq!(page.items[0].display_name, "Midnight Drive");
+    }
+
+    #[test]
+    fn excludes_backups_and_versions_from_the_library() {
+        let connection = database();
+        seed(&connection);
+        connection
+            .execute(
+                "INSERT INTO projects
+                 (display_name, original_name, file_path, extension, daw,
+                  parent_project_id, version_kind, version_confidence)
+                 VALUES ('Backup', 'beat backup.flp', 'C:/Music/beat backup.flp',
+                         '.flp', 'FL Studio', 1, 'backup', 'high')",
+                [],
+            )
+            .expect("linked backup");
+        connection
+            .execute(
+                "INSERT INTO projects
+                 (display_name, original_name, file_path, extension, daw,
+                  version_kind, version_confidence)
+                 VALUES ('Orphan', 'orphan autosaved.flp', 'C:/Music/orphan autosaved.flp',
+                         '.flp', 'FL Studio', 'backup', 'high')",
+                [],
+            )
+            .expect("orphan backup");
+
+        let page = ProjectQueryRepository::page(&connection, ProjectQuery::default())
+            .expect("library page");
+        assert_eq!(page.total, 2);
+        assert!(page.items.iter().all(|project| project.display_name != "Backup"));
+        assert!(page.items.iter().all(|project| project.display_name != "Orphan"));
     }
 
     #[test]

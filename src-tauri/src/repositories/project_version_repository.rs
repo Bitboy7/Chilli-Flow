@@ -13,8 +13,8 @@ impl ProjectVersionRepository {
     pub fn classify_discovered(connection: &Connection) -> AppResult<()> {
         let mut statement = connection.prepare(
             "SELECT id, original_name, file_path, extension, daw
-             FROM projects WHERE parent_project_id IS NULL AND version_kind = 'primary'
-               AND version_confidence IS NULL",
+             FROM projects WHERE parent_project_id IS NULL
+               AND (version_confidence IS NULL OR version_kind <> 'primary')",
         )?;
         let rows = statement
             .query_map([], |row| {
@@ -43,21 +43,28 @@ impl ProjectVersionRepository {
                         && normalized_stem(&other.name) == classification.base
                 })
                 .collect::<Vec<_>>();
-            if parents.len() != 1 {
-                continue;
+            if parents.len() == 1 {
+                connection.execute(
+                    "UPDATE projects
+                     SET parent_project_id = ?1, version_kind = ?2, version_confidence = ?3,
+                         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+                     WHERE id = ?4 AND parent_project_id IS NULL",
+                    params![
+                        parents[0].id,
+                        classification.kind,
+                        if classification.strong { "high" } else { "suggested" },
+                        candidate.id
+                    ],
+                )?;
+            } else if classification.strong {
+                connection.execute(
+                    "UPDATE projects
+                     SET version_kind = ?1, version_confidence = 'high',
+                         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+                     WHERE id = ?2 AND parent_project_id IS NULL",
+                    params![classification.kind, candidate.id],
+                )?;
             }
-            connection.execute(
-                "UPDATE projects
-                 SET parent_project_id = ?1, version_kind = ?2, version_confidence = ?3,
-                     updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
-                 WHERE id = ?4 AND parent_project_id IS NULL",
-                params![
-                    parents[0].id,
-                    classification.kind,
-                    if classification.strong { "high" } else { "suggested" },
-                    candidate.id
-                ],
-            )?;
         }
         Ok(())
     }
@@ -438,6 +445,51 @@ mod tests {
         assert!(set.versions.iter().all(|version| version.kind == "backup"));
         assert!(set.versions.iter().all(|version| version.confidence.as_deref() == Some("high")));
     }
+
+    #[test]
+    fn hides_orphan_autosaves_and_links_them_when_the_primary_appears() {
+        let connection = database();
+        for name in [
+            "Untitled (autosaved at 22h29).flp",
+            "Untitled (autosaved at 23h18).flp",
+        ] {
+            connection
+                .execute(
+                    "INSERT INTO projects
+                     (display_name, original_name, file_path, extension, daw)
+                     VALUES (?1, ?1, ?2, '.flp', 'FL Studio')",
+                    params![name, format!("C:/Music/{name}")],
+                )
+                .expect("autosave");
+        }
+
+        ProjectVersionRepository::classify_discovered(&connection).expect("classify orphans");
+        let visible: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM projects
+                 WHERE parent_project_id IS NULL AND version_kind = 'primary'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("visible projects");
+        assert_eq!(visible, 0);
+
+        connection
+            .execute(
+                "INSERT INTO projects
+                 (display_name, original_name, file_path, extension, daw)
+                 VALUES ('Untitled', 'Untitled.flp', 'C:/Music/Untitled.flp',
+                         '.flp', 'FL Studio')",
+                [],
+            )
+            .expect("primary");
+        ProjectVersionRepository::classify_discovered(&connection).expect("link orphans");
+
+        let set = ProjectVersionRepository::list(&connection, 3).expect("versions");
+        assert_eq!(set.versions.len(), 2);
+        assert!(set.versions.iter().all(|version| version.kind == "backup"));
+    }
+
     #[test]
     fn promotion_keeps_the_project_identity() {
         let mut connection = database();

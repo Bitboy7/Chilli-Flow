@@ -29,7 +29,8 @@ impl FinishModeRepository {
              JOIN project_statuses ps ON ps.key = p.status
              LEFT JOIN project_finish_plans fp ON fp.project_id = p.id
              LEFT JOIN project_finish_tasks ft ON ft.project_id = p.id
-             WHERE p.status NOT IN ('finished', 'archived') AND p.is_missing = 0
+             WHERE p.parent_project_id IS NULL AND p.version_kind = 'primary'
+               AND p.status NOT IN ('finished', 'archived') AND p.is_missing = 0
              GROUP BY p.id
              ORDER BY COALESCE(fp.is_focus, 0) DESC,
                       CASE COALESCE(fp.priority, 'medium') WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
@@ -221,6 +222,23 @@ mod tests {
         let plan = FinishModeRepository::get(&mut connection, 1).expect("plan");
         assert_eq!(plan.tasks.len(), 7);
         assert_eq!(plan.tasks[0].label, "Estructura");
+    }
+
+    #[test]
+    fn excludes_backups_from_finish_mode() {
+        let connection = database();
+        connection
+            .execute(
+                "UPDATE projects
+                 SET version_kind = 'backup', version_confidence = 'high'
+                 WHERE id = 4",
+                [],
+            )
+            .expect("mark backup");
+
+        let dashboard = FinishModeRepository::dashboard(&connection).expect("dashboard");
+        assert_eq!(dashboard.summary.in_progress, 3);
+        assert!(dashboard.projects.iter().all(|project| project.project_id != 4));
     }
 
     #[test]

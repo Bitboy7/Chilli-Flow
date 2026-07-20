@@ -117,7 +117,7 @@ export function ProjectWorkspacePage() {
             <WorkspaceTab to={"/projects/" + project.id} end icon={<LayoutDashboard className="size-4" />}>Resumen</WorkspaceTab>
             <WorkspaceTab to={"/projects/" + project.id + "/audio"} icon={<Layers3 className="size-4" />}>Audio y archivos</WorkspaceTab>
             <WorkspaceTab to={"/projects/" + project.id + "/finish"} icon={<ListChecks className="size-4" />}>Plan de cierre</WorkspaceTab>
-            <WorkspaceTab to={"/projects/" + project.id + "/versions"} icon={<History className="size-4" />}>Versiones</WorkspaceTab>
+            <WorkspaceTab to={"/projects/" + project.id + "/versions"} icon={<History className="size-4" />}>Versiones y backups</WorkspaceTab>
             <WorkspaceTab to={"/projects/" + project.id + "/handoff"} icon={<PackageOpen className="size-4" />}>Handoff</WorkspaceTab>
           </nav>
         </div>
