@@ -18,4 +18,6 @@ pub use playback_repository::PlaybackRepository;
 pub use scan_history_repository::{ScanHistoryMetrics, ScanHistoryRepository};
 pub use watched_folder_repository::WatchedFolderRepository;
 mod audio_analysis_repository;
+mod finish_mode_repository;
 pub use audio_analysis_repository::AudioAnalysisRepository;
+pub use finish_mode_repository::FinishModeRepository;

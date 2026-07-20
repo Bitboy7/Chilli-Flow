@@ -1,6 +1,7 @@
 pub mod app;
 pub mod extensions;
 pub mod folder_setup;
+pub mod finish_mode;
 pub mod folders;
 pub mod library;
 pub mod projects;

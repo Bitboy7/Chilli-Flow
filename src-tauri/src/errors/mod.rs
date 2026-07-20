@@ -58,6 +58,8 @@ pub enum AppError {
     AudioAnalysis(String),
     #[error("Estado del reproductor no válido: {0}")]
     InvalidPlaybackSession(String),
+    #[error("Plan para terminar no válido: {0}")]
+    InvalidFinishPlan(String),
     #[error("No se pudo serializar el estado local: {0}")]
     Serialization(#[from] serde_json::Error),
 }
