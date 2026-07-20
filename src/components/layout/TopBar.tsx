@@ -1,10 +1,10 @@
 import {
+  FilePlus2,
   FolderPlus,
   LayoutGrid,
   List,
   ScanSearch,
   Search,
-  Plus,
   SlidersHorizontal,
 } from "lucide-react";
 import { useEffect, useRef } from "react";
@@ -182,25 +182,29 @@ export function TopBar() {
         type="button"
         onClick={() => void handleScan()}
         disabled={isScanning}
-        title="Escanear todas las carpetas activas"
-        className="hidden h-9 items-center gap-2 rounded-lg border border-white/[0.07] px-3 text-xs text-stone-400 transition hover:bg-white/[0.04] hover:text-stone-100 disabled:cursor-not-allowed disabled:opacity-40 md:inline-flex"
+        title={isScanning ? "Escaneando carpetas" : "Escanear carpetas"}
+        aria-label={isScanning ? "Escaneando carpetas" : "Escanear carpetas"}
+        className="group hidden size-11 shrink-0 place-items-center rounded-xl border border-white/[0.08] text-stone-400 transition duration-200 hover:border-white/[0.15] hover:bg-white/[0.055] hover:text-stone-100 active:scale-95 disabled:cursor-wait disabled:text-orange-300 disabled:opacity-70 md:inline-grid"
       >
-        <ScanSearch className="size-3.5" />
-        Escanear
+        <ScanSearch className={["size-4.5 transition-transform duration-200 group-hover:scale-105", isScanning ? "animate-pulse" : ""].join(" ")} aria-hidden="true" />
       </button>
       <button
         type="button"
         onClick={() => void handleImport()}
         disabled={isScanning}
-        title="Seleccionar una carpeta"
-        className="hidden h-9 items-center gap-2 rounded-lg border border-white/[0.07] px-3 text-xs text-stone-400 transition hover:bg-white/[0.04] hover:text-stone-100 disabled:cursor-not-allowed disabled:opacity-60 xl:inline-flex"
+        title="Importar carpeta"
+        aria-label="Importar carpeta"
+        className="group inline-grid size-11 shrink-0 place-items-center rounded-xl border border-white/[0.08] text-stone-400 transition duration-200 hover:border-white/[0.15] hover:bg-white/[0.055] hover:text-stone-100 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
       >
-        <FolderPlus className="size-3.5" />
-        <span className="hidden sm:inline">Importar carpeta</span>
+        <FolderPlus className="size-4.5 transition-transform duration-200 group-hover:-translate-y-0.5" aria-hidden="true" />
       </button>
-      <Link to="/projects/new" className="inline-flex h-9 items-center gap-2 rounded-lg bg-orange-500 px-3.5 text-xs font-semibold text-stone-950 transition hover:bg-orange-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-400">
-        <Plus className="size-3.5" />
-        <span className="hidden sm:inline">Nuevo proyecto</span>
+      <Link
+        to="/projects/new"
+        title="Crear nuevo proyecto"
+        aria-label="Crear nuevo proyecto"
+        className="group inline-grid size-11 shrink-0 place-items-center rounded-xl bg-orange-500 text-stone-950 transition duration-200 hover:bg-orange-400 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-400"
+      >
+        <FilePlus2 className="size-4.5 transition-transform duration-200 group-hover:scale-105" aria-hidden="true" />
       </Link>
     </header>
   );
