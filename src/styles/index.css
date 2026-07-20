@@ -165,6 +165,36 @@ textarea:focus-visible {
     transform: translate3d(-2%, 2%, 0) scale(1.12);
   }
 }
+.analysis-loading-bar {
+  transform-origin: center;
+  animation: analysis-wave 900ms cubic-bezier(0.45, 0, 0.2, 1) infinite alternate;
+}
+
+.analysis-loading-sweep {
+  position: absolute;
+  inset-block: 0;
+  left: -35%;
+  width: 35%;
+  background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--color-orange-400) 16%, transparent), transparent);
+  animation: analysis-sweep 1.5s cubic-bezier(0.45, 0, 0.2, 1) infinite;
+}
+
+@keyframes analysis-wave {
+  from {
+    opacity: 0.32;
+    transform: scaleY(0.42);
+  }
+  to {
+    opacity: 0.85;
+    transform: scaleY(1);
+  }
+}
+
+@keyframes analysis-sweep {
+  to {
+    transform: translateX(390%);
+  }
+}
 @keyframes scan {
   0% {
     transform: translateX(-110%);
@@ -185,7 +215,9 @@ textarea:focus-visible {
   }
 
   .project-ambient__art,
-  .project-ambient__glow {
+  .project-ambient__glow,
+  .analysis-loading-bar,
+  .analysis-loading-sweep {
     animation: none !important;
   }
 }
