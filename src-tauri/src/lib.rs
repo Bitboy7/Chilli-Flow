@@ -53,6 +53,8 @@ pub fn run() {
             commands::project_files::open_project_file,
             commands::project_files::set_project_preview,
             commands::project_files::authorize_project_audio,
+            commands::playback::get_playback_session,
+            commands::playback::save_playback_session,
             commands::scanning::start_scan,
             commands::scanning::cancel_scan,
             commands::scanning::get_scan_history,

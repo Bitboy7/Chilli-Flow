@@ -4,6 +4,7 @@ mod folder_service;
 mod library_service;
 mod project_detail_service;
 mod project_file_service;
+mod playback_service;
 mod scan_service;
 mod scan_history_service;
 
@@ -13,5 +14,6 @@ pub use folder_service::FolderService;
 pub use library_service::LibraryService;
 pub use project_detail_service::ProjectDetailService;
 pub use project_file_service::ProjectFileService;
+pub use playback_service::PlaybackService;
 pub use scan_service::ScanService;
 pub use scan_history_service::ScanHistoryService;

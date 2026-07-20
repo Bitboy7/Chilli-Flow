@@ -11,6 +11,7 @@ import type {
   ProjectQuery,
   UpdateProjectInput,
 } from "../types/projects";
+import type { PlayableTrack } from "../types/playback";
 
 export function listProjects(query: ProjectQuery): Promise<ProjectPage> {
   return invoke<ProjectPage>("list_projects", { query });
@@ -87,6 +88,18 @@ export function setProjectPreview(projectId: number, fileId: number | null): Pro
 export async function projectAudioUrl(projectId: number, fileId: number): Promise<string> {
   const path = await invoke<string>("authorize_project_audio", { projectId, fileId });
   return convertFileSrc(path);
+}
+
+export function playableTrack(project: ProjectDetail, file: ProjectFile): PlayableTrack {
+  return {
+    projectId: project.id,
+    fileId: file.id,
+    projectName: project.displayName,
+    fileName: file.fileName,
+    fileType: file.fileType,
+    category: file.category,
+    isMissing: file.isMissing,
+  };
 }
 
 export function selectProjectAssetFolder(projectId: number, category: ProjectFolderCategory): Promise<ProjectDetail> {

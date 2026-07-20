@@ -4,6 +4,7 @@ mod project;
 mod project_detail;
 mod project_file;
 mod project_query;
+mod playback;
 mod scan;
 mod watched_folder;
 
@@ -15,6 +16,9 @@ pub use project_file::{ProjectFile, ProjectFileCategory};
 pub use project_query::{
     ProjectFacets, ProjectListItem, ProjectPage, ProjectQuery, ProjectSort,
     ProjectStatusFacet, ProjectTagFacet, SortDirection,
+};
+pub use playback::{
+    PlayableTrack, PlaybackSession, PlaybackSessionInput, PlaybackTrackRef,
 };
 pub use scan::{ScanFinished, ScanHistoryEntry, ScanHistoryPage, ScanProgress, ScanSession};
 pub use watched_folder::WatchedFolder;
