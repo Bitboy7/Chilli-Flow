@@ -81,5 +81,5 @@ pub fn run() {
             commands::scanning::get_scan_history,
         ])
         .run(tauri::generate_context!())
-        .expect("Chilli Beat could not start");
+        .expect("Chilli Flow could not start");
 }

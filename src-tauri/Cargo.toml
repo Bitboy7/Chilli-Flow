@@ -1,8 +1,8 @@
 [package]
-name = "chilli-beat"
+name = "chilli-flow"
 version = "0.1.0"
-description = "Biblioteca local de proyectos para productores musicales"
-authors = ["Chilli Beat contributors"]
+description = "Flujo local de proyectos para productores musicales"
+authors = ["Chilli Flow contributors"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

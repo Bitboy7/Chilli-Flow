@@ -14,7 +14,7 @@ Productores musicales que trabajan con distintos DAW y necesitan encontrar, orga
 
 ## Product Purpose
 
-Chilli Beat organiza proyectos musicales locales sin mover los originales y reduce el tiempo entre encontrar un proyecto y tomar una decisión de producción.
+Chilli Flow organiza proyectos musicales locales sin mover los originales y reduce el tiempo entre encontrar un proyecto y tomar una decisión de producción.
 
 ## Positioning
 

@@ -138,7 +138,7 @@ export function ProjectFilesPage() {
       pushToast({
         kind: "success",
         title: isDiscovered ? "Archivo ocultado" : "Asociación eliminada",
-        description: isDiscovered ? "Chilli Beat respetará esta decisión en futuras actualizaciones." : "El archivo físico permanece intacto.",
+        description: isDiscovered ? "Chilli Flow respetará esta decisión en futuras actualizaciones." : "El archivo físico permanece intacto.",
       });
     } catch (cause) { pushToast({ kind: "error", title: "No se pudo quitar el archivo", description: errorMessage(cause) }); }
     finally { setBusy(false); }
@@ -219,7 +219,7 @@ export function ProjectFilesPage() {
       <header>
         <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-orange-400/70">Organización sin mover archivos</p>
         <h2 className="mt-2 text-xl font-semibold text-stone-100">Audio y archivos</h2>
-        <p className="mt-2 max-w-3xl text-sm text-stone-500">Chilli Beat busca audio dentro de las carpetas del proyecto y guarda únicamente sus rutas. Nunca copia, mueve ni elimina los originales.</p>
+        <p className="mt-2 max-w-3xl text-sm text-stone-500">Chilli Flow busca audio dentro de las carpetas del proyecto y guarda únicamente sus rutas. Nunca copia, mueve ni elimina los originales.</p>
       </header>
 
       <section className="mt-6">
@@ -233,7 +233,7 @@ export function ProjectFilesPage() {
         <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/[0.07] bg-white/[0.018] px-4 py-3">
           <div className="min-w-0">
             <p className="truncate text-sm text-stone-300">{selectedPreview?.fileName ?? "No hay preview seleccionado"}</p>
-            <p className="mt-1 text-xs text-stone-500">Solo puede haber uno. La reproducción continúa mientras navegas por Chilli Beat.</p>
+            <p className="mt-1 text-xs text-stone-500">Solo puede haber uno. La reproducción continúa mientras navegas por Chilli Flow.</p>
           </div>
           <button type="button" disabled={!selectedPreview || busy} onClick={() => selectedPreview && playTrack(playableTrack(project, selectedPreview), playbackContext)} className="inline-flex h-11 shrink-0 items-center gap-2 rounded-xl bg-orange-500 px-3.5 text-xs font-semibold text-stone-950 hover:bg-orange-400 disabled:opacity-35">
             <Play className="size-3.5 fill-current" /> Reproducir
@@ -280,7 +280,7 @@ export function ProjectFilesPage() {
           <div className="mt-3 rounded-2xl border border-dashed border-white/[0.08] px-6 py-10 text-center">
             <FolderSearch className="mx-auto size-7 text-stone-600" />
             <p className="mt-3 text-sm font-medium text-stone-300">No encontramos audio dentro del proyecto</p>
-            <p className="mx-auto mt-2 max-w-xl text-xs leading-5 text-stone-500">Exporta en Renders, Audio, Samples o una carpeta configurada. Chilli Beat lo mostrará al volver desde el DAW.</p>
+            <p className="mx-auto mt-2 max-w-xl text-xs leading-5 text-stone-500">Exporta en Renders, Audio, Samples o una carpeta configurada. Chilli Flow lo mostrará al volver desde el DAW.</p>
           </div>
         ) : (
           <div className="mt-3 overflow-hidden rounded-2xl border border-white/[0.07] divide-y divide-white/[0.07]">

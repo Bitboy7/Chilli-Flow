@@ -98,7 +98,7 @@ export function ProjectVersionsPage() {
       <header className="max-w-2xl">
         <h2 className="text-xl font-semibold text-stone-100">Versiones y backups</h2>
         <p className="mt-2 text-sm leading-6 text-stone-500">
-          Chilli Beat agrupa copias relacionadas sin mover ni modificar los archivos del DAW.
+          Chilli Flow agrupa copias relacionadas sin mover ni modificar los archivos del DAW.
         </p>
       </header>
 

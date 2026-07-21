@@ -1,8 +1,8 @@
-# Chilli Beat
+# Chilli Flow
 
 [English version](README.md)
 
-Chilli Beat es un espacio de trabajo de escritorio, local-first, para productores musicales que organizan sesiones de distintos DAWs, comparan mezclas y referencias, recuperan el contexto de sus proyectos y convierten ideas incompletas en canciones terminadas.
+Chilli Flow es un espacio de trabajo de escritorio, local-first, para productores musicales que organizan sesiones de distintos DAWs, comparan mezclas y referencias, recuperan el contexto de sus proyectos y convierten ideas incompletas en canciones terminadas.
 
 Indexa proyectos existentes sin reubicarlos, mantiene los backups vinculados a su sesión principal, descubre audio nuevo exportado dentro del proyecto y crea paquetes neutrales de colaboración sin afirmar que los formatos propietarios pueden convertirse perfectamente.
 
@@ -11,7 +11,7 @@ Indexa proyectos existentes sin reubicarlos, mantiene los backups vinculados a s
 ## Principios del producto
 
 - **Local-first:** los metadatos permanecen en una base SQLite local; no se requiere cuenta ni servicio en la nube.
-- **No destructivo:** Chilli Beat guarda rutas y metadatos derivados. No reorganiza, mueve ni elimina los proyectos y audios originales.
+- **No destructivo:** Chilli Flow guarda rutas y metadatos derivados. No reorganiza, mueve ni elimina los proyectos y audios originales.
 - **Neutral respecto al DAW:** los archivos `.flp`, `.als`, `.rpp` y otras sesiones nativas conservan su formato y se abren con su DAW original.
 - **Enfocado en producción:** organización, escucha, comparación, planificación de cierre, versiones y handoff conviven en un mismo workspace.
 
@@ -39,7 +39,7 @@ Indexa proyectos existentes sin reubicarlos, mantiene los backups vinculados a s
 
 ### Workspaces administrados
 
-Al crear un proyecto se elige nombre, carpeta principal, DAW y una plantilla real opcional. Chilli Beat detecta instalaciones comunes de DAWs y prepara una estructura neutral:
+Al crear un proyecto se elige nombre, carpeta principal, DAW y una plantilla real opcional. Chilli Flow detecta instalaciones comunes de DAWs y prepara una estructura neutral:
 
 ```text
 Nombre del proyecto/
@@ -55,7 +55,7 @@ Nombre del proyecto/
 └── Project Info.json
 ```
 
-Chilli Beat nunca fabrica una sesión propietaria. Con una plantilla compatible, copia el proyecto real dentro de `Project Files`; sin plantilla, el workspace espera el primer guardado desde el DAW seleccionado y vincula esa sesión durante el siguiente escaneo de biblioteca.
+Chilli Flow nunca fabrica una sesión propietaria. Con una plantilla compatible, copia el proyecto real dentro de `Project Files`; sin plantilla, el workspace espera el primer guardado desde el DAW seleccionado y vincula esa sesión durante el siguiente escaneo de biblioteca.
 
 Los proyectos existentes también pueden previsualizar y aplicar una propuesta de carpetas adaptada al DAW. Solo se crean los directorios faltantes; los archivos existentes nunca se mueven.
 
@@ -76,7 +76,7 @@ En proyectos de FL Studio reconoce:
 | `References` | Referencia |
 | `Backup` / `Backups` | Excluida del descubrimiento de audio |
 
-Los workspaces creados por Chilli Beat también reconocen `Audio/Stems`, `Audio/Mixes`, `Audio/Masters` y `References`. Las carpetas de producción configuradas explícitamente tienen prioridad sobre las convenciones inferidas.
+Los workspaces creados por Chilli Flow también reconocen `Audio/Stems`, `Audio/Mixes`, `Audio/Masters` y `References`. Las carpetas de producción configuradas explícitamente tienen prioridad sobre las convenciones inferidas.
 
 - Descubre WAV, MP3, FLAC, OGG, M4A, AAC, AIFF y AIF sin copiarlos.
 - Agrupa los resultados por carpeta de origen y distingue archivos descubiertos de asociaciones manuales.
@@ -134,7 +134,7 @@ Finish Mode convierte una colección de ideas incompletas en una cola de producc
 
 ### Universal Handoff Package
 
-Chilli Beat no promete conversión entre DAWs. Genera un único ZIP versionado con estructura neutral para colaboradores:
+Chilli Flow no promete conversión entre DAWs. Genera un único ZIP versionado con estructura neutral para colaboradores:
 
 ```text
 Proyecto — Handoff v1.zip
@@ -227,7 +227,7 @@ pnpm tauri dev
 Si Windows Application Control bloquea la salida de Cargo dentro de `Documents`:
 
 ```powershell
-$env:CARGO_TARGET_DIR="$env:USERPROFILE\.cargo\chilli-beat-target"
+$env:CARGO_TARGET_DIR="$env:USERPROFILE\.cargo\chilli-flow-target"
 pnpm tauri dev
 ```
 

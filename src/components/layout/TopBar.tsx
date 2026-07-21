@@ -62,7 +62,7 @@ export function TopBar() {
   const isScanning = useScanStore((state) => state.isScanning);
   const startScan = useScanStore((state) => state.start);
   const pushToast = useToastStore((state) => state.push);
-  const pageTitle = pageTitles[pathname] ?? "Chilli Beat";
+  const pageTitle = pageTitles[pathname] ?? "Chilli Flow";
   const searchInput = useRef<HTMLInputElement>(null);
   const isProjectRoute = [
     "/library",

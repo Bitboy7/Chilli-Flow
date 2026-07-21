@@ -13,7 +13,7 @@ impl AppService {
         let stats = LibraryRepository::stats(&connection)?;
 
         Ok(AppStatus {
-            app_name: "Chilli Beat".to_string(),
+            app_name: "Chilli Flow".to_string(),
             app_version: env!("CARGO_PKG_VERSION").to_string(),
             database_ready: state.database().path().exists(),
             schema_version: stats.schema_version,

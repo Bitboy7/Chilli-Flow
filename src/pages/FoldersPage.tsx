@@ -203,7 +203,7 @@ export function FoldersPage() {
             Carpetas supervisadas
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-500">
-            Chilli Beat solo recorre las carpetas elegidas aquí. Nunca mueve,
+            Chilli Flow solo recorre las carpetas elegidas aquí. Nunca mueve,
             renombra ni elimina sus archivos.
           </p>
         </div>

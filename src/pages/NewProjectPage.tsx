@@ -300,7 +300,7 @@ export function NewProjectPage() {
 
           <div className="mt-5 flex gap-3 text-xs leading-5 text-stone-600">
             <HardDrive className="mt-0.5 size-4 shrink-0 text-stone-500" />
-            Chilli Beat crea carpetas y copia la plantilla cuando corresponde. No mueve archivos existentes.
+            Chilli Flow crea carpetas y copia la plantilla cuando corresponde. No mueve archivos existentes.
           </div>
           <div className="mt-3 flex gap-3 text-xs leading-5 text-stone-600">
             <Music4 className="mt-0.5 size-4 shrink-0 text-stone-500" />

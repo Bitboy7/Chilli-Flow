@@ -199,7 +199,7 @@ export function SettingsPage() {
           Configuración
         </h2>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-400">
-          Personaliza la apariencia y define qué archivos reconoce Chilli Beat como proyectos.
+          Personaliza la apariencia y define qué archivos reconoce Chilli Flow como proyectos.
         </p>
       </header>
 

@@ -275,7 +275,7 @@ impl HandoffService {
         };
         if let Err(error) = record_result {
             return Err(AppError::InvalidProject(format!(
-                "El paquete se creó, pero no se pudo registrar en Chilli Beat: {error}"
+                "El paquete se creó, pero no se pudo registrar en Chilli Flow: {error}"
             )));
         }
 

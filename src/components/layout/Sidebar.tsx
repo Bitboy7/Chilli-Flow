@@ -1,6 +1,7 @@
-import { Flame, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
+import chilliFlowLogo from "../../assets/chilli-flow.svg";
 import { useUiStore } from "../../stores/ui-store";
 import {
   managementNavigation,
@@ -68,16 +69,21 @@ export function Sidebar() {
           collapsed ? "justify-center" : "gap-3 px-5",
         ].join(" ")}
       >
-        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-orange-400 to-red-500 text-stone-950 shadow-[0_0_28px_rgba(251,146,60,0.16)]">
-          <Flame className="size-5 fill-current" strokeWidth={1.8} />
+        <span className="size-9 shrink-0 overflow-hidden rounded-xl bg-black">
+          <img
+            src={chilliFlowLogo}
+            alt=""
+            className="size-full object-cover"
+            aria-hidden="true"
+          />
         </span>
         {!collapsed && (
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold tracking-wide text-stone-100">
-              Chilli Beat
+              Chilli Flow
             </p>
             <p className="text-[0.65rem] uppercase tracking-[0.2em] text-stone-600">
-              Project library
+              Flujo de producción
             </p>
           </div>
         )}

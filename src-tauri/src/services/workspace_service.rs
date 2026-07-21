@@ -168,7 +168,7 @@ fn prepare_workspace(
         "name": name,
         "daw": daw,
         "projectExtension": extension,
-        "createdBy": "Chilli Beat",
+        "createdBy": "Chilli Flow",
         "commonStart": null,
         "bpm": null,
         "musicalKey": null,

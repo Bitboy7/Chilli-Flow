@@ -33,7 +33,7 @@ export function useAppStatus(): AppStatusState {
               error:
                 error instanceof Error
                   ? error.message
-                  : "No fue posible inicializar Chilli Beat.",
+                  : "No fue posible inicializar Chilli Flow.",
               isLoading: false,
             });
           }
