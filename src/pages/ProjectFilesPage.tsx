@@ -1,5 +1,5 @@
 import {
-  Activity, Check, ExternalLink, EyeOff, FileAudio, FilePlus2, Files, FolderSearch, FolderTree,
+  Activity, Check, Circle, CircleCheck, ExternalLink, EyeOff, FileAudio, FilePlus2, Files, FolderSearch, FolderTree,
   ListPlus, LoaderCircle, Play, RefreshCw, Trash2, X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -18,7 +18,7 @@ import type { ProjectWorkspaceContext } from "./ProjectWorkspacePage";
 
 const categories: { value: ProjectFileCategory; label: string }[] = [
   { value: "stem", label: "Stem" }, { value: "mix", label: "Mix" },
-  { value: "master", label: "Master" }, { value: "preview", label: "Preview" },
+  { value: "master", label: "Master" },
   { value: "reference", label: "Reference" }, { value: "artwork", label: "Artwork" },
   { value: "midi", label: "MIDI" }, { value: "preset", label: "Preset" },
   { value: "sample", label: "Audio del proyecto" }, { value: "other", label: "Otro" },
@@ -150,8 +150,12 @@ export function ProjectFilesPage() {
     try {
       await setProjectPreview(projectId, fileId);
       setPreviewId(fileId);
-      pushToast({ kind: "success", title: fileId ? "Preview seleccionado" : "Preview desactivado" });
-    } catch (cause) { pushToast({ kind: "error", title: "No se pudo cambiar el preview", description: errorMessage(cause) }); }
+      const previewPath = files.find((file) => file.id === fileId)?.filePath ?? null;
+      setProject((current) => current ? { ...current, previewPath } : current);
+      pushToast({ kind: "success", title: fileId ? "Preview principal actualizado" : "Preview principal desactivado" });
+    } catch (cause) {
+      pushToast({ kind: "error", title: "No se pudo cambiar el preview principal", description: errorMessage(cause) });
+    }
     finally { setBusy(false); }
   };
 
@@ -220,16 +224,16 @@ export function ProjectFilesPage() {
 
       <section className="mt-6">
         <div className="mb-2 flex items-center justify-between gap-4">
-          <h2 className="text-sm font-medium text-stone-300">Preview de audio</h2>
-          <select value={previewId ?? ""} disabled={busy} onChange={(event) => void choosePreview(event.currentTarget.value)} className="h-11 max-w-64 rounded-xl border border-white/[0.08] bg-[#1b1917] px-3 text-xs text-stone-300 outline-none">
-            <option value="">Sin preview</option>
+          <h2 className="text-sm font-medium text-stone-300">Preview principal</h2>
+          <select aria-label="Preview principal del proyecto" value={previewId ?? ""} disabled={busy} onChange={(event) => void choosePreview(event.currentTarget.value)} className="h-11 max-w-64 rounded-xl border border-white/[0.08] bg-[#1b1917] px-3 text-xs text-stone-300 outline-none focus-visible:border-orange-400/40 focus-visible:ring-2 focus-visible:ring-orange-400/20">
+            <option value="">Sin preview principal</option>
             {audioFiles.map((file) => <option key={file.id} value={file.id}>{file.fileName}</option>)}
           </select>
         </div>
         <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/[0.07] bg-white/[0.018] px-4 py-3">
           <div className="min-w-0">
             <p className="truncate text-sm text-stone-300">{selectedPreview?.fileName ?? "No hay preview seleccionado"}</p>
-            <p className="mt-1 text-xs text-stone-500">La reproducción continúa mientras navegas por Chilli Beat.</p>
+            <p className="mt-1 text-xs text-stone-500">Solo puede haber uno. La reproducción continúa mientras navegas por Chilli Beat.</p>
           </div>
           <button type="button" disabled={!selectedPreview || busy} onClick={() => selectedPreview && playTrack(playableTrack(project, selectedPreview), playbackContext)} className="inline-flex h-11 shrink-0 items-center gap-2 rounded-xl bg-orange-500 px-3.5 text-xs font-semibold text-stone-950 hover:bg-orange-400 disabled:opacity-35">
             <Play className="size-3.5 fill-current" /> Reproducir
@@ -293,12 +297,14 @@ export function ProjectFilesPage() {
                   {group.files.map((file) => {
                     const canPlay = audioTypes.has(file.fileType.toLowerCase()) && !file.isMissing;
                     const track = canPlay ? playableTrack(project, file) : null;
+                    const isPrimaryPreview = previewId === file.id;
                     return (
                       <article key={file.id} className="flex flex-wrap items-center gap-3 bg-white/[0.012] px-4 py-3 hover:bg-white/[0.03]">
                         <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-white/[0.04]"><FileAudio className="size-4 text-stone-500" /></span>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
                             <p className="truncate text-sm text-stone-300">{file.fileName}</p>
+                            {isPrimaryPreview ? <span className="shrink-0 rounded-md bg-orange-400/10 px-2 py-1 text-[0.68rem] font-medium text-orange-200">Preview principal</span> : null}
                             {file.isMissing ? <span className="rounded bg-red-400/10 px-1.5 py-0.5 text-[0.7rem] text-red-300">No encontrado</span> : null}
                           </div>
                           <p className="mt-1 truncate text-xs text-stone-500">{file.fileType || "sin extensión"} · {formatBytes(file.fileSize)}{file.relativePath ? ` · ${file.relativePath}` : ""}</p>
@@ -307,7 +313,10 @@ export function ProjectFilesPage() {
                           <>
                             <button type="button" onClick={() => playTrack(track, playbackContext)} title="Reproducir" className="grid size-11 place-items-center rounded-lg text-stone-500 hover:bg-orange-400/10 hover:text-orange-300"><Play className="size-3.5 fill-current" /></button>
                             <button type="button" onClick={() => addToQueue(track)} title="Añadir a la cola" className="grid size-11 place-items-center rounded-lg text-stone-500 hover:bg-white/5 hover:text-stone-200"><ListPlus className="size-4" /></button>
-                            <button type="button" disabled={analyzingId !== null} onClick={() => void analyze(file)} title="Analizar audio" aria-label={`Analizar ${file.fileName}`} aria-expanded={activeAnalysisId === file.id} aria-controls={`audio-analysis-${file.id}`} className={["grid size-11 place-items-center rounded-lg transition disabled:opacity-35", activeAnalysisId === file.id ? "bg-orange-400/10 text-orange-300" : "text-stone-500 hover:bg-white/5 hover:text-stone-200"].join(" ")}>
+                            <button type="button" disabled={busy} onClick={() => void choosePreview(isPrimaryPreview ? "" : String(file.id))} title={isPrimaryPreview ? "Quitar preview principal" : "Usar como preview principal"} aria-label={(isPrimaryPreview ? "Quitar " : "Usar ") + file.fileName + " como preview principal"} aria-pressed={isPrimaryPreview} className={["grid size-11 place-items-center rounded-lg transition disabled:opacity-35", isPrimaryPreview ? "bg-orange-400/10 text-orange-300" : "text-stone-500 hover:bg-white/5 hover:text-stone-200"].join(" ") + " focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-400"}>
+                              {isPrimaryPreview ? <CircleCheck className="size-4" /> : <Circle className="size-4" />}
+                            </button>
+                            <button type="button" disabled={analyzingId !== null} onClick={() => void analyze(file)} title="Analizar audio" aria-label={`Analizar ${file.fileName}`} aria-expanded={activeAnalysisId === file.id} aria-controls={`audio-analysis-${file.id}`} className={["grid size-11 place-items-center rounded-lg transition disabled:opacity-35", activeAnalysisId === file.id ? "bg-orange-400/10 text-orange-300" : "text-stone-500 hover:bg-white/5 hover:text-stone-200"].join(" ") + " focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-400"}>
                               {analyzingId === file.id ? <LoaderCircle className="size-4 animate-spin text-orange-300" /> : <Activity className="size-4" />}
                             </button>
                             <div className="flex overflow-hidden rounded-lg border border-white/[0.07]" aria-label={`Asignar ${file.fileName} a comparación`}>
@@ -316,6 +325,7 @@ export function ProjectFilesPage() {
                           </>
                         ) : null}
                         <select value={file.category} disabled={busy} onChange={(event) => void reclassify(file, event.currentTarget.value as ProjectFileCategory)} aria-label={`Categoría de ${file.fileName}`} className="h-11 rounded-lg border border-white/[0.07] bg-[#1b1917] px-2 text-[0.7rem] text-stone-400 outline-none">
+                          {file.category === "preview" ? <option value="preview">Sin clasificar (antes Preview)</option> : null}
                           {categories.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
                         </select>
                         <button type="button" disabled={file.isMissing || busy} onClick={() => void open(file)} title="Abrir archivo" className="grid size-11 place-items-center rounded-lg text-stone-600 hover:bg-white/5 hover:text-stone-300 disabled:opacity-30"><ExternalLink className="size-4" /></button>

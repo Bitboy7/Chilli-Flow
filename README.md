@@ -91,7 +91,8 @@ Managed Chilli Beat workspaces also recognize `Audio/Stems`, `Audio/Mixes`, `Aud
 - Keep playback active while navigating through the library and every project tab.
 - Persist the queue, current track, position, volume, repeat mode, and shuffle state in SQLite.
 - Add, remove, and reorder queue entries.
-- Associate stems, mixes, masters, previews, references, MIDI, presets, samples, artwork, and other files manually when needed.
+- Associate stems, mixes, masters, references, MIDI, presets, samples, artwork, and other files manually when needed.
+- Choose exactly one compatible audio file as the project's primary preview from either the summary selector or its file row; choosing another replaces the previous selection.
 - Assign two tracks to A/B decks and switch between synchronized sources.
 - Apply optional LUFS-based level matching when both analyses are available.
 - Preview WAV, MP3, FLAC, and OGG directly from their original path without conversion.
@@ -241,7 +242,7 @@ cargo test --manifest-path src-tauri/Cargo.toml --no-default-features
 pnpm tauri build --bundles nsis
 ```
 
-The current codebase passes **17 frontend tests** and **52 Rust tests**. Build and installer commands should still be rerun on the target machine before publishing.
+The current codebase passes **17 frontend tests** and **53 Rust tests**. Build and installer commands should still be rerun on the target machine before publishing.
 
 ## Architecture
 

@@ -91,7 +91,8 @@ Los workspaces creados por Chilli Beat también reconocen `Audio/Stems`, `Audio/
 - Mantiene la reproducción al navegar por la biblioteca y todas las pestañas del proyecto.
 - Persiste en SQLite la cola, pista actual, posición, volumen, repetición y reproducción aleatoria.
 - Permite añadir, eliminar y reordenar elementos de la cola.
-- Asocia manualmente stems, mezclas, masters, previews, referencias, MIDI, presets, samples, artwork y otros archivos cuando sea necesario.
+- Asocia manualmente stems, mezclas, masters, referencias, MIDI, presets, samples, artwork y otros archivos cuando sea necesario.
+- Elige exactamente un audio compatible como preview principal desde el selector de resumen o desde su fila; al elegir otro se reemplaza la selección anterior.
 - Asigna dos pistas a decks A/B y alterna entre fuentes sincronizadas.
 - Aplica compensación opcional de nivel basada en LUFS cuando ambos análisis están disponibles.
 - Reproduce WAV, MP3, FLAC y OGG directamente desde su ruta original, sin conversión.
@@ -241,7 +242,7 @@ cargo test --manifest-path src-tauri/Cargo.toml --no-default-features
 pnpm tauri build --bundles nsis
 ```
 
-El código actual supera **17 pruebas frontend** y **52 pruebas Rust**. Los comandos de build e instalador deben repetirse en la máquina objetivo antes de publicar.
+El código actual supera **17 pruebas frontend** y **53 pruebas Rust**. Los comandos de build e instalador deben repetirse en la máquina objetivo antes de publicar.
 
 ## Arquitectura
 

@@ -253,11 +253,33 @@ mod tests {
     fn removing_selected_preview_clears_the_project_path() {
         let mut connection = database();
         let file = NewProjectFile { path: "C:/preview.mp3", name: "preview.mp3", file_type: "mp3", size: 42 };
-        let files = ProjectFileRepository::add_batch(&mut connection, 1, ProjectFileCategory::Preview, &[file]).expect("add");
+        let files = ProjectFileRepository::add_batch(&mut connection, 1, ProjectFileCategory::Mix, &[file]).expect("add");
         ProjectFileRepository::set_preview(&connection, 1, Some(files[0].id)).expect("preview");
         ProjectFileRepository::remove(&mut connection, 1, files[0].id).expect("remove");
         let preview: Option<String> = connection.query_row("SELECT preview_path FROM projects WHERE id = 1", [], |row| row.get(0)).expect("path");
         assert_eq!(preview, None);
+    }
+
+    #[test]
+    fn selecting_a_new_preview_replaces_the_previous_one() {
+        let mut connection = database();
+        let files = [
+            NewProjectFile { path: "C:/first.wav", name: "first.wav", file_type: "wav", size: 42 },
+            NewProjectFile { path: "C:/second.wav", name: "second.wav", file_type: "wav", size: 84 },
+        ];
+        let files = ProjectFileRepository::add_batch(
+            &mut connection,
+            1,
+            ProjectFileCategory::Mix,
+            &files,
+        ).expect("add");
+        ProjectFileRepository::set_preview(&connection, 1, Some(files[0].id)).expect("first");
+        ProjectFileRepository::set_preview(&connection, 1, Some(files[1].id)).expect("second");
+
+        let preview: Option<String> = connection
+            .query_row("SELECT preview_path FROM projects WHERE id = 1", [], |row| row.get(0))
+            .expect("path");
+        assert_eq!(preview.as_deref(), Some("C:/second.wav"));
     }
 
     #[test]

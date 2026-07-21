@@ -37,8 +37,11 @@ impl HandoffService {
         if project.musical_key.is_none() {
             warnings.push("Falta la tonalidad del proyecto".into());
         }
-        if !files.iter().any(|file| file.category == "preview" && !file.is_missing) {
-            warnings.push("No hay un preview disponible".into());
+        let has_preview = project.preview_path.as_deref().is_some_and(|preview_path| {
+            files.iter().any(|file| file.file_path == preview_path && !file.is_missing)
+        });
+        if !has_preview {
+            warnings.push("No hay un preview principal disponible".into());
         }
         if !files.iter().any(|file| file.category == "stem" && !file.is_missing) {
             warnings.push("No hay stems asociados".into());
@@ -140,7 +143,9 @@ impl HandoffService {
             let mut file_count = 0_i64;
 
             for (file, variant) in &selected {
-                let directory = package_directory(file, variant);
+                let is_primary_preview =
+                    project.preview_path.as_deref() == Some(file.file_path.as_str());
+                let directory = package_directory(file, variant, is_primary_preview);
                 let target_directory = staging.join(directory);
                 fs::create_dir_all(&target_directory).map_err(AppError::FileOperation)?;
                 let target = unique_target(&target_directory, &file.file_name);
@@ -155,7 +160,7 @@ impl HandoffService {
                 let analysis = analyses.get(&file.id);
                 manifest_files.push(json!({
                     "path": relative,
-                    "category": file.category,
+                    "category": if is_primary_preview { "preview" } else { file.category.as_str() },
                     "variant": variant,
                     "sourceFileName": file.file_name,
                     "sampleRate": analysis.map(|value| value.0),
@@ -347,7 +352,10 @@ fn validate_variant(value: &str) -> AppResult<()> {
     }
 }
 
-fn package_directory(file: &ProjectFile, variant: &str) -> PathBuf {
+fn package_directory(file: &ProjectFile, variant: &str, is_primary_preview: bool) -> PathBuf {
+    if is_primary_preview {
+        return PathBuf::from("Preview");
+    }
     match file.category.as_str() {
         "stem" => PathBuf::from("Audio").join("Stems").join(title_case(variant)),
         "mix" => PathBuf::from("Audio").join("Mixes"),
@@ -558,8 +566,9 @@ mod tests {
             source_label: None,
             relative_path: None,
         };
-        assert_eq!(package_directory(&file, "wet"), PathBuf::from("Audio/Stems/Wet"));
-        assert_eq!(package_directory(&file, "dry"), PathBuf::from("Audio/Stems/Dry"));
+        assert_eq!(package_directory(&file, "wet", false), PathBuf::from("Audio/Stems/Wet"));
+        assert_eq!(package_directory(&file, "dry", false), PathBuf::from("Audio/Stems/Dry"));
+        assert_eq!(package_directory(&file, "neutral", true), PathBuf::from("Preview"));
     }
 
     #[test]
