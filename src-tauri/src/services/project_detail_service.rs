@@ -6,7 +6,7 @@ use crate::{
     errors::{AppError, AppResult},
     models::{CoverAsset, ProjectDetail, ProjectFolderCategory, UpdateProjectInput},
     platform,
-    repositories::ProjectDetailRepository,
+    repositories::{ProjectDetailRepository, ProjectRepository},
     state::AppState,
 };
 
@@ -176,7 +176,16 @@ pub(crate) fn authorized_existing_project(state: &AppState, project_id: i64) -> 
             ProjectDetailRepository::watched_paths(&connection)?,
         )
     };
-    let path = dunce::canonicalize(detail.file_path).map_err(AppError::FileOperation)?;
+    let stored_path = PathBuf::from(detail.file_path);
+    let path = match dunce::canonicalize(&stored_path) {
+        Ok(path) => path,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            let connection = state.database().connection()?;
+            ProjectRepository::mark_missing(&connection, project_id)?;
+            return Err(AppError::ProjectFileMissing);
+        }
+        Err(error) => return Err(AppError::FileOperation(error)),
+    };
     authorize_project_path(&path, &watched_paths)?;
     Ok(path)
 }

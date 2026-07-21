@@ -11,6 +11,7 @@ import type {
   ProjectFolderCategory,
   ProjectPage,
   ProjectVersionSet,
+  SyncProjectFilesResult,
   ProjectQuery,
   UpdateProjectInput,
 } from "../types/projects";
@@ -67,6 +68,10 @@ export function revealProject(projectId: number): Promise<void> {
 export function listProjectFiles(projectId: number): Promise<ProjectFile[]> {
   return invoke<ProjectFile[]>("list_project_files", { projectId });
 }
+export function syncProjectFiles(projectId: number): Promise<SyncProjectFilesResult> {
+  return invoke<SyncProjectFilesResult>("sync_project_files", { projectId });
+}
+
 
 export function selectProjectFiles(projectId: number, category: ProjectFileCategory): Promise<ProjectFile[]> {
   return invoke<ProjectFile[]>("select_project_files", { projectId, category });

@@ -1,12 +1,10 @@
 import {
   AlertTriangle,
-  Check,
   FileArchive,
   FolderOpen,
   LoaderCircle,
   PackageCheck,
   PackageOpen,
-  ShieldCheck,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
@@ -109,8 +107,8 @@ export function ProjectHandoffPage() {
       setResult(exported);
       pushToast({
         kind: "success",
-        title: "Handoff preparado",
-        description: "El paquete se creó sin modificar los archivos originales.",
+        title: "Handoff ZIP preparado",
+        description: "El archivo ZIP se creó sin modificar los originales.",
       });
       setPreview((current) => current ? { ...current, nextVersion: current.nextVersion + 1 } : current);
     } catch (cause) {
@@ -138,17 +136,19 @@ export function ProjectHandoffPage() {
     );
   }
 
+  const hasSidebar = preview.warnings.length > 0 || Boolean(result);
+
   return (
     <div className="pt-5">
       <header className="max-w-3xl">
         <p className="text-xs font-medium text-orange-300">Intercambio entre DAWs</p>
         <h2 className="mt-2 text-xl font-semibold text-stone-100">Universal Handoff</h2>
         <p className="mt-2 text-sm leading-6 text-stone-400">
-          Crea un paquete portable y verificable. No convierte el proyecto ni promete conservar routing, plugins o automatización.
+          Crea un único archivo ZIP portable y verificable. No convierte el proyecto ni promete conservar routing, plugins o automatización.
         </p>
       </header>
 
-      <div className="mt-6 grid items-start gap-7 lg:grid-cols-[minmax(0,1fr)_19rem]">
+      <div className={["mt-6 grid items-start gap-7", hasSidebar ? "lg:grid-cols-[minmax(0,1fr)_19rem]" : ""].join(" ")}>
         <div className="space-y-7">
           <section aria-labelledby="handoff-context">
             <h3 id="handoff-context" className="text-sm font-medium text-stone-300">Contexto para el colaborador</h3>
@@ -219,52 +219,44 @@ export function ProjectHandoffPage() {
           </section>
 
           <section className="border-t border-white/[0.07] pt-6" aria-labelledby="handoff-destination">
-            <h3 id="handoff-destination" className="text-sm font-medium text-stone-300">Destino · Requerido</h3>
+            <h3 id="handoff-destination" className="text-sm font-medium text-stone-300">Carpeta donde guardar el ZIP · Requerido</h3>
             <div className="mt-3 flex gap-2">
-              <input value={destination} readOnly aria-label="Carpeta de destino" placeholder="Selecciona dónde guardar el paquete" className={inputClass + " min-w-0 flex-1 cursor-default"} />
+              <input value={destination} readOnly aria-label="Carpeta donde guardar el ZIP" placeholder="Selecciona dónde guardar el archivo ZIP" className={inputClass + " min-w-0 flex-1 cursor-default"} />
               <button type="button" disabled={busy} onClick={() => void chooseDestination()} className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl border border-white/[0.08] px-3.5 text-xs text-stone-300 transition hover:border-orange-400/25 hover:bg-orange-400/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-400">
                 <FolderOpen className="size-4" /> Elegir
               </button>
             </div>
             <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
-              <p id="handoff-export-help" className="max-w-lg text-xs leading-5 text-stone-400">{missingRequirement ?? "Se generarán Project Info.json, README.pdf y Checksums.sha256 junto a los archivos seleccionados."}</p>
+              <p id="handoff-export-help" className="max-w-lg text-xs leading-5 text-stone-400">{missingRequirement ?? "El ZIP incluirá Project Info.json, README.pdf, Checksums.sha256 y los archivos seleccionados."}</p>
               <button type="button" aria-describedby="handoff-export-help" disabled={!canExport} onClick={() => void exportPackage()} className="inline-flex h-11 items-center gap-2 rounded-xl bg-orange-500 px-5 text-sm font-semibold text-stone-950 transition hover:bg-orange-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-400 disabled:cursor-not-allowed disabled:opacity-40">
                 {busy ? <LoaderCircle className="size-4 animate-spin" /> : <PackageOpen className="size-4" />}
-                {busy ? "Preparando paquete…" : "Crear paquete v" + preview.nextVersion}
+                {busy ? "Comprimiendo ZIP…" : "Crear ZIP v" + preview.nextVersion}
               </button>
             </div>
           </section>
         </div>
 
-        <aside className="space-y-4 lg:sticky lg:top-6">
-          <div className="rounded-2xl border border-white/[0.07] bg-white/[0.015] p-4">
-            <div className="flex items-center gap-3">
-              <span className="grid size-9 place-items-center rounded-xl bg-emerald-400/[0.08] text-emerald-300"><ShieldCheck className="size-4" /></span>
-              <div><h3 className="text-sm font-medium text-stone-300">Paquete no destructivo</h3><p className="mt-0.5 text-xs text-stone-400">Los originales no se modifican.</p></div>
-            </div>
-            <ul className="mt-4 space-y-2 text-xs text-stone-500">
-              {["Carpetas estándar por categoría", "Verificación SHA-256 para detectar cambios", "Metadatos portables en JSON", "Versión incremental del paquete"].map((item) => <li key={item} className="flex gap-2"><Check className="mt-0.5 size-3.5 shrink-0 text-emerald-400" />{item}</li>)}
-            </ul>
-          </div>
-
-          {preview.warnings.length ? (
+        {hasSidebar ? (
+          <aside className="space-y-4 lg:sticky lg:top-6">
+            {preview.warnings.length ? (
             <div className="rounded-2xl border border-amber-400/15 bg-amber-400/[0.035] p-4">
               <h3 className="flex items-center gap-2 text-xs font-medium text-amber-200"><AlertTriangle className="size-4" /> Antes de compartir</h3>
               <ul className="mt-3 space-y-2 text-xs leading-5 text-amber-100/55">{preview.warnings.map((warning) => <li key={warning}>• {warning}</li>)}</ul>
             </div>
           ) : null}
 
-          {result ? (
+            {result ? (
             <div role="status" className="rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.045] p-4">
               <PackageCheck className="size-5 text-emerald-300" />
-              <h3 className="mt-3 text-sm font-medium text-emerald-100">Handoff v{result.versionNumber} listo</h3>
-              <p className="mt-1 text-xs leading-5 text-emerald-100/55">{result.fileCount} archivos copiados y verificados.</p>
+              <h3 className="mt-3 text-sm font-medium text-emerald-100">Handoff ZIP v{result.versionNumber} listo</h3>
+              <p className="mt-1 text-xs leading-5 text-emerald-100/55">{result.fileCount} archivos comprimidos y verificados.</p>
               <button type="button" onClick={() => void openResult()} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-lg border border-emerald-300/15 px-3 text-xs text-emerald-200 hover:bg-emerald-300/[0.06] focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-300">
-                <FolderOpen className="size-3.5" /> Abrir paquete
+                <FileArchive className="size-3.5" /> Mostrar archivo ZIP
               </button>
             </div>
-          ) : null}
-        </aside>
+            ) : null}
+          </aside>
+        ) : null}
       </div>
     </div>
   );

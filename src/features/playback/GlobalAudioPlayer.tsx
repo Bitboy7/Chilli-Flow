@@ -1,5 +1,5 @@
 import {
-  ChevronDown, ChevronLeft, ChevronRight, GitCompareArrows, ListMusic, Music2, Pause, Play,
+  AudioLines, ChevronDown, ChevronLeft, ChevronRight, GitCompareArrows, ListMusic, Music2, Pause, Play,
   Repeat2, Scale, Shuffle, Trash2, Volume2, X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -10,10 +10,15 @@ import { playbackSessionInput, usePlaybackStore } from "../../stores/playback-st
 import { useToastStore } from "../../stores/toast-store";
 import { comparisonGains } from "../../utils/audio";
 import { errorMessage } from "../../utils/errors";
+import { SpectrumAnalyzerPanel } from "./SpectrumAnalyzerPanel";
 
 export function GlobalAudioPlayer() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const comparisonBRef = useRef<HTMLAudioElement>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserARef = useRef<AnalyserNode | null>(null);
+  const analyserBRef = useRef<AnalyserNode | null>(null);
+  const [spectrumOpen, setSpectrumOpen] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [comparisonAUrl, setComparisonAUrl] = useState<string | null>(null);
   const [comparisonBUrl, setComparisonBUrl] = useState<string | null>(null);
@@ -114,6 +119,58 @@ export function GlobalAudioPlayer() {
     return () => window.clearInterval(timer);
   }, []);
 
+  useEffect(() => () => {
+    void audioContextRef.current?.close();
+    audioContextRef.current = null;
+    analyserARef.current = null;
+    analyserBRef.current = null;
+  }, []);
+
+  useEffect(() => {
+    if (displayTrack) return;
+    setSpectrumOpen(false);
+    void audioContextRef.current?.close();
+    audioContextRef.current = null;
+    analyserARef.current = null;
+    analyserBRef.current = null;
+  }, [displayTrack]);
+
+  const toggleSpectrum = async () => {
+    if (spectrumOpen) {
+      setSpectrumOpen(false);
+      return;
+    }
+
+    try {
+      let audioContext = audioContextRef.current;
+      if (!audioContext) {
+        const primaryAudio = audioRef.current;
+        const comparisonAudio = comparisonBRef.current;
+        if (!primaryAudio || !comparisonAudio) throw new Error("El reproductor todavía no está listo.");
+
+        audioContext = new AudioContext();
+        const analyserA = createSpectrumAnalyser(audioContext);
+        const analyserB = createSpectrumAnalyser(audioContext);
+        audioContext.createMediaElementSource(primaryAudio).connect(analyserA);
+        audioContext.createMediaElementSource(comparisonAudio).connect(analyserB);
+        analyserA.connect(audioContext.destination);
+        analyserB.connect(audioContext.destination);
+        audioContextRef.current = audioContext;
+        analyserARef.current = analyserA;
+        analyserBRef.current = analyserB;
+      }
+
+      await audioContext.resume();
+      setSpectrumOpen(true);
+    } catch (cause) {
+      pushToast({
+        kind: "error",
+        title: "No se pudo abrir el espectro",
+        description: errorMessage(cause),
+      });
+    }
+  };
+
   if (!displayTrack) return null;
 
   const seek = (seconds: number) => {
@@ -126,6 +183,7 @@ export function GlobalAudioPlayer() {
     <>
       <audio
         ref={audioRef}
+        crossOrigin="anonymous"
         src={primaryUrl ?? undefined}
         preload="metadata"
         onPlay={() => state.setPlaying(true)}
@@ -149,10 +207,10 @@ export function GlobalAudioPlayer() {
           }
         }}
       />
-      <audio ref={comparisonBRef} src={isComparing ? comparisonBUrl ?? undefined : undefined} preload="metadata" aria-hidden />
+      <audio ref={comparisonBRef} crossOrigin="anonymous" src={isComparing ? comparisonBUrl ?? undefined : undefined} preload="metadata" aria-hidden />
 
       {state.isQueueOpen ? (
-        <aside className="fixed bottom-[4.75rem] right-3 z-40 flex max-h-[min(32rem,70vh)] w-[min(24rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-xl border border-white/[0.1] bg-[#1b1917] shadow-[0_8px_20px_rgba(0,0,0,0.45)]" aria-label="Cola de reproducción">
+        <aside className={["fixed right-3 z-40 flex max-h-[min(32rem,70vh)] w-[min(24rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-xl border border-white/[0.1] bg-[#1b1917] shadow-[0_8px_20px_rgba(0,0,0,0.45)] transition-[bottom] duration-200", spectrumOpen ? "bottom-[18.75rem]" : "bottom-[4.75rem]"].join(" ")} aria-label="Cola de reproducción">
           <header className="flex h-12 items-center justify-between border-b border-white/[0.07] px-4">
             <div><p className="text-sm font-medium text-stone-200">Cola</p><p className="text-[0.62rem] text-stone-500">{state.queue.length} archivos</p></div>
             <div className="flex items-center gap-1">
@@ -176,6 +234,15 @@ export function GlobalAudioPlayer() {
             ))}
           </div>
         </aside>
+      ) : null}
+
+      {spectrumOpen ? (
+        <SpectrumAnalyzerPanel
+          analyser={isComparing && state.comparisonDeck === "b" ? analyserBRef.current : analyserARef.current}
+          isPlaying={state.isPlaying}
+          trackName={displayTrack.fileName}
+          sourceLabel={isComparing ? "Deck " + state.comparisonDeck.toUpperCase() : "Salida principal"}
+        />
       ) : null}
 
       <footer className="relative z-30 grid h-[4.25rem] shrink-0 grid-cols-[minmax(0,1fr)_minmax(18rem,2fr)_minmax(0,1fr)] items-center gap-4 border-t border-white/[0.08] bg-[#12110f] px-4">
@@ -216,6 +283,9 @@ export function GlobalAudioPlayer() {
           ) : state.comparisonA || state.comparisonB ? (
             <span className="inline-flex items-center gap-1.5 text-[0.62rem] text-stone-600"><GitCompareArrows className="size-3.5" /> Asigna A y B</span>
           ) : null}
+          <button type="button" onClick={() => void toggleSpectrum()} className={["inline-flex h-8 items-center gap-2 rounded-lg px-2.5 text-xs", spectrumOpen ? "bg-orange-500/10 text-orange-200" : "text-stone-500 hover:bg-white/5 hover:text-stone-200"].join(" ")} aria-expanded={spectrumOpen} aria-controls="global-spectrum" aria-label={spectrumOpen ? "Ocultar analizador de espectro" : "Mostrar analizador de espectro"} title={spectrumOpen ? "Ocultar espectro" : "Mostrar espectro"}>
+            <AudioLines className="size-3.5" /><span className="hidden xl:inline">Espectro</span>
+          </button>
           <button type="button" onClick={state.toggleQueue} className={["inline-flex h-8 items-center gap-2 rounded-lg px-2.5 text-xs", state.isQueueOpen ? "bg-orange-500/10 text-orange-200" : "text-stone-500 hover:bg-white/5 hover:text-stone-200"].join(" ")} aria-expanded={state.isQueueOpen}><ListMusic className="size-3.5" /> Cola</button>
           <Volume2 className="size-3.5 shrink-0 text-stone-600" />
           <input type="range" min={0} max={1} step="0.01" value={state.volume} onChange={(event) => state.setVolume(Number(event.currentTarget.value))} className="h-1 w-20 accent-orange-500" aria-label="Volumen" />
@@ -232,4 +302,14 @@ function PlayerButton({ active = false, label, onClick, children }: { active?: b
 function formatTime(seconds: number) {
   if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
   return Math.floor(seconds / 60) + ":" + Math.floor(seconds % 60).toString().padStart(2, "0");
+}
+
+
+function createSpectrumAnalyser(audioContext: AudioContext) {
+  const analyser = audioContext.createAnalyser();
+  analyser.fftSize = 2048;
+  analyser.minDecibels = -96;
+  analyser.maxDecibels = -12;
+  analyser.smoothingTimeConstant = 0.78;
+  return analyser;
 }

@@ -1,5 +1,5 @@
 use std::{
-    path::Path,
+    path::{Path, PathBuf},
     sync::atomic::{AtomicBool, Ordering},
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -17,6 +17,7 @@ pub struct ScanOutcome {
     pub projects: Vec<DiscoveredProject>,
     pub files_scanned: u64,
     pub unreadable_entries: u64,
+    pub unreadable_paths: Vec<PathBuf>,
     pub was_cancelled: bool,
 }
 
@@ -38,6 +39,7 @@ where
     let mut projects = Vec::new();
     let mut files_scanned = 0_u64;
     let mut unreadable_entries = 0_u64;
+    let mut unreadable_paths = Vec::new();
     let mut walker = WalkDir::new(root).follow_links(false).into_iter();
 
     while let Some(entry_result) = walker.next() {
@@ -46,14 +48,16 @@ where
                 projects,
                 files_scanned,
                 unreadable_entries,
+                unreadable_paths,
                 was_cancelled: true,
             };
         }
 
         let entry = match entry_result {
             Ok(entry) => entry,
-            Err(_) => {
+            Err(error) => {
                 unreadable_entries += 1;
+                unreadable_paths.push(error.path().unwrap_or(root).to_path_buf());
                 continue;
             }
         };
@@ -98,6 +102,7 @@ where
         projects,
         files_scanned,
         unreadable_entries,
+        unreadable_paths,
         was_cancelled: false,
     }
 }

@@ -1,13 +1,15 @@
 use std::{
     collections::{HashMap, HashSet},
     fs::{self, File},
-    io::{Read, Write},
+    io::{self, Read, Write},
     path::{Path, PathBuf},
 };
 
 use rusqlite::OptionalExtension;
 use serde_json::json;
 use sha2::{Digest, Sha256};
+use walkdir::WalkDir;
+use zip::{write::SimpleFileOptions, CompressionMethod, ZipWriter};
 
 use crate::{
     errors::{AppError, AppResult},
@@ -37,8 +39,11 @@ impl HandoffService {
         if project.musical_key.is_none() {
             warnings.push("Falta la tonalidad del proyecto".into());
         }
-        if !files.iter().any(|file| file.category == "preview" && !file.is_missing) {
-            warnings.push("No hay un preview disponible".into());
+        let has_preview = project.preview_path.as_deref().is_some_and(|preview_path| {
+            files.iter().any(|file| file.file_path == preview_path && !file.is_missing)
+        });
+        if !has_preview {
+            warnings.push("No hay un preview principal disponible".into());
         }
         if !files.iter().any(|file| file.category == "stem" && !file.is_missing) {
             warnings.push("No hay stems asociados".into());
@@ -112,22 +117,22 @@ impl HandoffService {
         };
 
         let safe_name = safe_component(&project.display_name);
-        let final_root = parent.join(format!(
-            "{} — Handoff v{}",
-            safe_name, version_number
-        ));
-        if final_root.exists() {
+        let package_name = format!("{} — Handoff v{}", safe_name, version_number);
+        let final_archive = parent.join(format!("{package_name}.zip"));
+        if final_archive.exists() {
             return Err(AppError::InvalidProject(
-                "Ya existe un paquete con esa versión en el destino".into(),
+                "Ya existe un archivo ZIP con esa versión en el destino".into(),
             ));
         }
-        let staging = parent.join(format!(
+        let temporary_name = format!(
             ".chilli-handoff-{}-{}-{}",
             project_id,
             version_number,
             std::process::id()
-        ));
-        if staging.exists() {
+        );
+        let staging = parent.join(&temporary_name);
+        let temporary_archive = parent.join(format!("{temporary_name}.zip.tmp"));
+        if staging.exists() || temporary_archive.exists() {
             return Err(AppError::InvalidProject(
                 "Existe una exportación temporal pendiente en el destino".into(),
             ));
@@ -140,7 +145,9 @@ impl HandoffService {
             let mut file_count = 0_i64;
 
             for (file, variant) in &selected {
-                let directory = package_directory(file, variant);
+                let is_primary_preview =
+                    project.preview_path.as_deref() == Some(file.file_path.as_str());
+                let directory = package_directory(file, variant, is_primary_preview);
                 let target_directory = staging.join(directory);
                 fs::create_dir_all(&target_directory).map_err(AppError::FileOperation)?;
                 let target = unique_target(&target_directory, &file.file_name);
@@ -155,7 +162,7 @@ impl HandoffService {
                 let analysis = analyses.get(&file.id);
                 manifest_files.push(json!({
                     "path": relative,
-                    "category": file.category,
+                    "category": if is_primary_preview { "preview" } else { file.category.as_str() },
                     "variant": variant,
                     "sourceFileName": file.file_name,
                     "sampleRate": analysis.map(|value| value.0),
@@ -243,12 +250,18 @@ impl HandoffService {
             }
         };
 
-        if let Err(error) = fs::rename(&staging, &final_root) {
-            cleanup_staging(&staging, &parent);
+        let archive_result = write_zip_archive(&staging, &temporary_archive);
+        cleanup_staging(&staging, &parent);
+        if let Err(error) = archive_result {
+            cleanup_archive(&temporary_archive, &parent);
+            return Err(error);
+        }
+        if let Err(error) = fs::rename(&temporary_archive, &final_archive) {
+            cleanup_archive(&temporary_archive, &parent);
             return Err(AppError::FileOperation(error));
         }
 
-        let destination_path = final_root.to_string_lossy().into_owned();
+        let destination_path = final_archive.to_string_lossy().into_owned();
         let record_result = {
             let mut connection = state.database().connection()?;
             HandoffRepository::save_export(
@@ -285,8 +298,22 @@ impl HandoffService {
             ));
         }
         drop(connection);
-        let canonical = platform::canonicalize_directory(path)?;
-        platform::open_path(&canonical)
+        let stored = Path::new(path);
+        if stored.is_dir() {
+            let canonical = platform::canonicalize_directory(path)?;
+            return platform::open_path(&canonical);
+        }
+        let canonical = dunce::canonicalize(stored)
+            .map_err(|error| AppError::InvalidPath(format!("No se pudo resolver el ZIP: {error}")))?;
+        let is_zip = canonical.is_file()
+            && canonical.extension().and_then(|value| value.to_str())
+                .is_some_and(|extension| extension.eq_ignore_ascii_case("zip"));
+        if !is_zip {
+            return Err(AppError::InvalidPath(
+                "El archivo Handoff ya no existe o no es un ZIP válido".into(),
+            ));
+        }
+        platform::reveal_path(&canonical)
     }
 }
 
@@ -347,7 +374,10 @@ fn validate_variant(value: &str) -> AppResult<()> {
     }
 }
 
-fn package_directory(file: &ProjectFile, variant: &str) -> PathBuf {
+fn package_directory(file: &ProjectFile, variant: &str, is_primary_preview: bool) -> PathBuf {
+    if is_primary_preview {
+        return PathBuf::from("Preview");
+    }
     match file.category.as_str() {
         "stem" => PathBuf::from("Audio").join("Stems").join(title_case(variant)),
         "mix" => PathBuf::from("Audio").join("Mixes"),
@@ -430,6 +460,43 @@ fn copy_with_hash(source: &Path, target: &Path) -> AppResult<String> {
     }
     output.flush().map_err(AppError::FileOperation)?;
     Ok(format!("{:x}", hasher.finalize()))
+}
+
+fn write_zip_archive(source_root: &Path, archive_path: &Path) -> AppResult<()> {
+    let output = File::create(archive_path).map_err(AppError::FileOperation)?;
+    let mut archive = ZipWriter::new(output);
+    let directory_options = SimpleFileOptions::default().unix_permissions(0o755);
+
+    for entry in WalkDir::new(source_root).min_depth(1).sort_by_file_name() {
+        let entry = entry.map_err(|error| AppError::HandoffArchive(error.to_string()))?;
+        let relative = entry.path().strip_prefix(source_root)
+            .map_err(|_| AppError::HandoffArchive("Una ruta temporal salió del paquete".into()))?;
+        let name = relative.to_string_lossy().replace('\\', "/");
+
+        if entry.file_type().is_dir() {
+            archive.add_directory(format!("{name}/"), directory_options)
+                .map_err(|error| AppError::HandoffArchive(error.to_string()))?;
+            continue;
+        }
+        if !entry.file_type().is_file() {
+            continue;
+        }
+
+        let metadata = entry.metadata()
+            .map_err(|error| AppError::HandoffArchive(error.to_string()))?;
+        let options = SimpleFileOptions::default()
+            .compression_method(CompressionMethod::Deflated)
+            .unix_permissions(0o644)
+            .large_file(metadata.len() > u32::MAX as u64);
+        archive.start_file(name, options)
+            .map_err(|error| AppError::HandoffArchive(error.to_string()))?;
+        let mut input = File::open(entry.path()).map_err(AppError::FileOperation)?;
+        io::copy(&mut input, &mut archive).map_err(AppError::FileOperation)?;
+    }
+
+    let output = archive.finish()
+        .map_err(|error| AppError::HandoffArchive(error.to_string()))?;
+    output.sync_all().map_err(AppError::FileOperation)
 }
 
 fn sorted_values(values: HashSet<i64>) -> Vec<i64> {
@@ -538,6 +605,12 @@ fn cleanup_staging(staging: &Path, expected_parent: &Path) {
     }
 }
 
+fn cleanup_archive(archive: &Path, expected_parent: &Path) {
+    if archive.parent() == Some(expected_parent) && archive.is_file() {
+        let _ = fs::remove_file(archive);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -554,15 +627,39 @@ mod tests {
             file_size: 1,
             created_at: String::new(),
             is_missing: false,
+            origin: "manual".into(),
+            source_label: None,
+            relative_path: None,
         };
-        assert_eq!(package_directory(&file, "wet"), PathBuf::from("Audio/Stems/Wet"));
-        assert_eq!(package_directory(&file, "dry"), PathBuf::from("Audio/Stems/Dry"));
+        assert_eq!(package_directory(&file, "wet", false), PathBuf::from("Audio/Stems/Wet"));
+        assert_eq!(package_directory(&file, "dry", false), PathBuf::from("Audio/Stems/Dry"));
+        assert_eq!(package_directory(&file, "neutral", true), PathBuf::from("Preview"));
     }
 
     #[test]
     fn sanitizes_names_without_losing_the_extension() {
         assert_eq!(safe_file_name("Bass: wet.wav"), "Bass- wet.wav");
         assert_eq!(safe_component("Midnight / Drive"), "Midnight - Drive");
+    }
+
+    #[test]
+    fn writes_a_staging_tree_as_a_zip_archive() {
+        let directory = tempfile::tempdir().expect("directory");
+        let staging = directory.path().join("staging");
+        fs::create_dir_all(staging.join("Audio/Mixes")).expect("folders");
+        fs::write(staging.join("Audio/Mixes/demo.wav"), b"wave-data").expect("audio");
+        fs::write(staging.join("Project Info.json"), b"{}").expect("manifest");
+        let archive_path = directory.path().join("handoff.zip");
+
+        write_zip_archive(&staging, &archive_path).expect("zip");
+
+        let file = File::open(archive_path).expect("open");
+        let mut archive = zip::ZipArchive::new(file).expect("archive");
+        assert!(archive.by_name("Project Info.json").is_ok());
+        let mut audio = archive.by_name("Audio/Mixes/demo.wav").expect("audio entry");
+        let mut bytes = Vec::new();
+        audio.read_to_end(&mut bytes).expect("read");
+        assert_eq!(bytes, b"wave-data");
     }
 
     #[test]

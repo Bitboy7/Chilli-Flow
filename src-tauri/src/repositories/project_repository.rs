@@ -188,6 +188,7 @@ impl ProjectRepository {
         connection: &mut Connection,
         folder_path: &Path,
         discovered_paths: &HashSet<String>,
+        unreadable_paths: &[std::path::PathBuf],
     ) -> AppResult<u64> {
         let folder = folder_path.to_string_lossy();
         let candidates = {
@@ -223,6 +224,9 @@ impl ProjectRepository {
                 if !is_missing
                     && Path::new(&file_path).starts_with(folder_path)
                     && !discovered_paths.contains(&file_path)
+                    && !unreadable_paths
+                        .iter()
+                        .any(|path| Path::new(&file_path).starts_with(path))
                 {
                     update.execute(params![project_id])?;
                     marked_missing += 1;
@@ -232,6 +236,20 @@ impl ProjectRepository {
 
         transaction.commit()?;
         Ok(marked_missing)
+    }
+
+    pub fn mark_missing(connection: &Connection, project_id: i64) -> AppResult<()> {
+        let changed = connection.execute(
+            "UPDATE projects
+             SET is_missing = 1,
+                 updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+             WHERE id = ?1",
+            params![project_id],
+        )?;
+        if changed == 0 {
+            return Err(crate::errors::AppError::ProjectNotFound);
+        }
+        Ok(())
     }
 }
 
@@ -319,6 +337,7 @@ mod tests {
             &mut connection,
             Path::new("C:/Music"),
             &HashSet::new(),
+            &[],
         )
         .expect("mark missing");
         let missing_count: i64 = connection
@@ -331,6 +350,26 @@ mod tests {
 
         assert_eq!(marked, 1);
         assert_eq!(missing_count, 1);
+    }
+
+    #[test]
+    fn preserves_projects_below_an_unreadable_path() {
+        let mut connection = database();
+        ProjectRepository::upsert_batch(
+            &mut connection,
+            &[project("C:/Music/Cloud/beat.flp", 10)],
+        )
+        .expect("seed project");
+
+        let marked = ProjectRepository::mark_missing_in_folder(
+            &mut connection,
+            Path::new("C:/Music"),
+            &HashSet::new(),
+            &[std::path::PathBuf::from("C:/Music/Cloud")],
+        )
+        .expect("reconcile");
+
+        assert_eq!(marked, 0);
     }
 
     #[test]

@@ -38,6 +38,8 @@ pub enum AppError {
     ScanAlreadyRunning,
     #[error("El proyecto solicitado no existe")]
     ProjectNotFound,
+    #[error("El archivo original ya no existe. El proyecto se retiró de la biblioteca; no se eliminó ningún archivo adicional")]
+    ProjectFileMissing,
     #[error("Datos del proyecto no válidos: {0}")]
     InvalidProject(String),
     #[error("La ruta del proyecto no pertenece a una carpeta supervisada")]
@@ -54,6 +56,8 @@ pub enum AppError {
     AssociatedFileNotFound,
     #[error("El archivo seleccionado no es un audio compatible con el preview")]
     UnsupportedAudio,
+    #[error("No se pudo crear el archivo ZIP: {0}")]
+    HandoffArchive(String),
     #[error("No se pudo analizar el audio: {0}")]
     AudioAnalysis(String),
     #[error("Estado del reproductor no válido: {0}")]

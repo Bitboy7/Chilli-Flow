@@ -27,7 +27,16 @@ export const ProjectCard = memo(function ProjectCard({
   const run = async (action: () => Promise<void>) => {
     setIsBusy(true);
     try { await action(); }
-    catch (cause) { pushToast({ kind: "error", title: "No se pudo completar la acción", description: errorMessage(cause) }); }
+    catch (cause) {
+      const description = errorMessage(cause);
+      const wasRemoved = description.includes("se retiró de la biblioteca");
+      pushToast({
+        kind: wasRemoved ? "info" : "error",
+        title: wasRemoved ? "Proyecto retirado" : "No se pudo completar la acción",
+        description,
+      });
+      window.dispatchEvent(new Event("chilli:library-changed"));
+    }
     finally { setIsBusy(false); }
   };
   const toggleFavorite = () => run(async () => {
