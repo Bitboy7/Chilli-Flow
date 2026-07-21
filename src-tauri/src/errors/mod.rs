@@ -54,6 +54,8 @@ pub enum AppError {
     AssociatedFileNotFound,
     #[error("El archivo seleccionado no es un audio compatible con el preview")]
     UnsupportedAudio,
+    #[error("No se pudo crear el archivo ZIP: {0}")]
+    HandoffArchive(String),
     #[error("No se pudo analizar el audio: {0}")]
     AudioAnalysis(String),
     #[error("Estado del reproductor no válido: {0}")]

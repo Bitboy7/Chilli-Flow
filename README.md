@@ -134,10 +134,10 @@ Finish Mode turns an archive of unfinished ideas into an actionable production q
 
 ### Universal Handoff Package
 
-Chilli Beat does not promise DAW-to-DAW conversion. It creates a versioned neutral package for collaborators:
+Chilli Beat does not promise DAW-to-DAW conversion. It creates one versioned ZIP with a neutral structure for collaborators:
 
 ```text
-Project — Handoff v1/
+Project — Handoff v1.zip
 ├── Audio/
 │   ├── Stems/
 │   │   ├── Wet/
@@ -155,7 +155,7 @@ Project — Handoff v1/
 └── README.pdf
 ```
 
-A handoff can include the native project, selected associated files, wet/dry/neutral variants, BPM, key, time signature, common start point, DAW version, plugin list, collaborator notes, technical audio metadata, incremental package versioning, and SHA-256 verification. Sources are copied into a staging directory and are never moved or rewritten.
+A handoff can include the native project, selected associated files, wet/dry/neutral variants, BPM, key, time signature, common start point, DAW version, plugin list, collaborator notes, technical audio metadata, incremental package versioning, and SHA-256 verification. Sources are copied into a private staging directory, compressed into one atomic ZIP, and never moved or rewritten.
 
 ### Personalization and accessibility
 
@@ -187,7 +187,7 @@ Additional safe extensions can be managed in Settings without replacing the buil
 - Project-audio synchronization reads only recognized or explicitly configured project folders.
 - Open and reveal operations resolve stored IDs and validate trusted paths.
 - Physical rename is isolated behind a dedicated validated command.
-- Handoff output is finalized only after every staged file has been written successfully.
+- Handoff output is finalized only after every staged file has been written, compressed, and synchronized successfully; incomplete temporary folders and archives are cleaned up.
 
 ## Technology
 
@@ -243,7 +243,7 @@ cargo test --manifest-path src-tauri/Cargo.toml --no-default-features
 pnpm tauri build --bundles nsis
 ```
 
-The current codebase passes **17 frontend tests** and **53 Rust tests**. Build and installer commands should still be rerun on the target machine before publishing.
+The current codebase passes **17 frontend tests** and **54 Rust tests**. Build and installer commands should still be rerun on the target machine before publishing.
 
 ## Architecture
 

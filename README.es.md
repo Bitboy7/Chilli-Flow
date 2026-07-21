@@ -134,10 +134,10 @@ Finish Mode convierte una colección de ideas incompletas en una cola de producc
 
 ### Universal Handoff Package
 
-Chilli Beat no promete conversión entre DAWs. Genera un paquete neutral y versionado para colaboradores:
+Chilli Beat no promete conversión entre DAWs. Genera un único ZIP versionado con estructura neutral para colaboradores:
 
 ```text
-Proyecto — Handoff v1/
+Proyecto — Handoff v1.zip
 ├── Audio/
 │   ├── Stems/
 │   │   ├── Wet/
@@ -155,7 +155,7 @@ Proyecto — Handoff v1/
 └── README.pdf
 ```
 
-El handoff puede incluir el proyecto nativo, archivos asociados seleccionados, variantes wet/dry/neutral, BPM, tonalidad, compás, punto de inicio común, versión del DAW, lista de plugins, notas para el colaborador, metadatos técnicos de audio, versión incremental y verificación SHA-256. Las fuentes se copian a un directorio temporal y nunca se mueven ni reescriben.
+El handoff puede incluir el proyecto nativo, archivos asociados seleccionados, variantes wet/dry/neutral, BPM, tonalidad, compás, punto de inicio común, versión del DAW, lista de plugins, notas para el colaborador, metadatos técnicos de audio, versión incremental y verificación SHA-256. Las fuentes se copian a un directorio temporal privado, se comprimen en un único ZIP atómico y nunca se mueven ni reescriben.
 
 ### Personalización y accesibilidad
 
@@ -187,7 +187,7 @@ Desde Configuración pueden añadirse extensiones seguras sin reemplazar el cat�
 - La sincronización de audio lee únicamente carpetas reconocidas o configuradas explícitamente para el proyecto.
 - Las acciones para abrir y mostrar archivos resuelven identificadores almacenados y validan rutas confiables.
 - El renombrado físico está aislado en un comando dedicado y validado.
-- Un handoff solo se finaliza después de escribir correctamente todos los archivos temporales.
+- Un handoff solo se finaliza después de escribir, comprimir y sincronizar correctamente todos los archivos; las carpetas y archivos temporales incompletos se eliminan.
 
 ## Tecnologías
 
@@ -243,7 +243,7 @@ cargo test --manifest-path src-tauri/Cargo.toml --no-default-features
 pnpm tauri build --bundles nsis
 ```
 
-El código actual supera **17 pruebas frontend** y **53 pruebas Rust**. Los comandos de build e instalador deben repetirse en la máquina objetivo antes de publicar.
+El código actual supera **17 pruebas frontend** y **54 pruebas Rust**. Los comandos de build e instalador deben repetirse en la máquina objetivo antes de publicar.
 
 ## Arquitectura
 
