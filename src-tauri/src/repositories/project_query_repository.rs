@@ -94,20 +94,20 @@ impl ProjectQueryRepository {
         let daws = distinct_strings(
             connection,
             "SELECT DISTINCT daw FROM projects
-             WHERE parent_project_id IS NULL AND version_kind = 'primary'
+             WHERE is_missing = 0 AND parent_project_id IS NULL AND version_kind = 'primary'
              ORDER BY daw COLLATE NOCASE",
         )?;
         let extensions = distinct_strings(
             connection,
             "SELECT DISTINCT extension FROM projects
-             WHERE parent_project_id IS NULL AND version_kind = 'primary'
+             WHERE is_missing = 0 AND parent_project_id IS NULL AND version_kind = 'primary'
              ORDER BY extension COLLATE NOCASE",
         )?;
         let genres = distinct_strings(
             connection,
             "SELECT DISTINCT genre
              FROM projects
-             WHERE parent_project_id IS NULL AND version_kind = 'primary'
+             WHERE is_missing = 0 AND parent_project_id IS NULL AND version_kind = 'primary'
                AND genre IS NOT NULL AND trim(genre) <> ''
              ORDER BY genre COLLATE NOCASE",
         )?;
@@ -155,7 +155,9 @@ impl ProjectQueryRepository {
 }
 
 fn filters(query: &ProjectQuery) -> (String, Vec<Value>) {
-    let mut conditions = vec!["p.parent_project_id IS NULL AND p.version_kind = 'primary'"];
+    let mut conditions = vec![
+        "p.is_missing = 0 AND p.parent_project_id IS NULL AND p.version_kind = 'primary'",
+    ];
     let mut values = Vec::new();
 
     if let Some(search) = &query.search {
@@ -379,6 +381,21 @@ mod tests {
         assert_eq!(page.total_pages, 2);
         assert_eq!(page.items.len(), 1);
         assert_eq!(page.items[0].display_name, "Midnight Drive");
+    }
+
+    #[test]
+    fn excludes_missing_projects_from_the_library() {
+        let connection = database();
+        seed(&connection);
+        connection
+            .execute("UPDATE projects SET is_missing = 1 WHERE id = 1", [])
+            .expect("mark missing");
+
+        let page = ProjectQueryRepository::page(&connection, ProjectQuery::default())
+            .expect("library page");
+
+        assert_eq!(page.total, 1);
+        assert_eq!(page.items[0].display_name, "Ambient Sketch");
     }
 
     #[test]

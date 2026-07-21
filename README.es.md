@@ -20,7 +20,7 @@ Indexa proyectos existentes sin reubicarlos, mantiene los backups vinculados a s
 ### Biblioteca de proyectos multi-DAW
 
 - Indexa recursivamente solo las carpetas elegidas por el usuario; rechaza raíces completas de disco y no sigue enlaces simbólicos.
-- Ejecuta escaneos cancelables fuera del hilo de interfaz y conserva un historial con proyectos creados, actualizados, movidos, faltantes y entradas ilegibles.
+- Ejecuta escaneos cancelables fuera del hilo de interfaz, retira de la biblioteca los proyectos eliminados y protege las subrutas que no pudieron leerse. El historial conserva métricas de proyectos creados, actualizados, movidos, faltantes y entradas ilegibles.
 - Permite buscar, filtrar, ordenar, marcar favoritos y paginar bibliotecas grandes.
 - Filtra por DAW, extensión, estado, género, etiquetas y favoritos.
 - Reconcilia un proyecto movido cuando existe una coincidencia única, sin perder sus metadatos locales.
@@ -243,7 +243,7 @@ cargo test --manifest-path src-tauri/Cargo.toml --no-default-features
 pnpm tauri build --bundles nsis
 ```
 
-El código actual supera **17 pruebas frontend** y **54 pruebas Rust**. Los comandos de build e instalador deben repetirse en la máquina objetivo antes de publicar.
+El código actual supera **17 pruebas frontend** y **56 pruebas Rust**. Los comandos de build e instalador deben repetirse en la máquina objetivo antes de publicar.
 
 ## Arquitectura
 

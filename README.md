@@ -20,7 +20,7 @@ It indexes existing projects without relocating them, keeps backups attached to 
 ### Multi-DAW project library
 
 - Recursively index only folders selected by the user; drive roots and symbolic-link traversal are rejected.
-- Run cancellable scans outside the UI thread and review persisted scan history with created, updated, moved, missing, and unreadable counts.
+- Run cancellable scans outside the UI thread, remove deleted projects from the visible library, and protect subpaths that could not be read. Persisted scan history reports created, updated, moved, missing, and unreadable counts.
 - Search, filter, sort, favorite, and paginate large libraries.
 - Filter by DAW, extension, status, genre, tags, and favorites.
 - Reconcile a uniquely moved project without discarding its local metadata.
@@ -243,7 +243,7 @@ cargo test --manifest-path src-tauri/Cargo.toml --no-default-features
 pnpm tauri build --bundles nsis
 ```
 
-The current codebase passes **17 frontend tests** and **54 Rust tests**. Build and installer commands should still be rerun on the target machine before publishing.
+The current codebase passes **17 frontend tests** and **56 Rust tests**. Build and installer commands should still be rerun on the target machine before publishing.
 
 ## Architecture
 

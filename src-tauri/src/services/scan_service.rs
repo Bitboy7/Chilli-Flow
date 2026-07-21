@@ -156,7 +156,7 @@ fn run_session(
 
         let was_cancelled =
             outcome.was_cancelled || cancellation.load(Ordering::Relaxed);
-        let can_reconcile = can_reconcile_scan(was_cancelled, outcome.unreadable_entries);
+        let can_reconcile = can_reconcile_scan(was_cancelled);
         let warning = (outcome.unreadable_entries > 0).then(|| {
             format!(
                 "{} elementos no se pudieron leer",
@@ -175,7 +175,7 @@ fn run_session(
         let persistence = || -> AppResult<_> {
             let state = app.state::<AppState>();
             let mut connection = state.database().connection()?;
-            let moved = if can_reconcile {
+            let moved = if can_reconcile && outcome.unreadable_entries == 0 {
                 ProjectRepository::reconcile_moved_in_folder(
                     &mut connection, &canonical_folder, &outcome.projects, &discovered_paths,
                 )?
@@ -187,6 +187,7 @@ fn run_session(
                     &mut connection,
                     &canonical_folder,
                     &discovered_paths,
+                    &outcome.unreadable_paths,
                 )?
             } else { 0 };
             if !was_cancelled {
@@ -255,8 +256,8 @@ fn run_session(
     Ok(final_event)
 }
 
-fn can_reconcile_scan(was_cancelled: bool, unreadable_entries: u64) -> bool {
-    !was_cancelled && unreadable_entries == 0
+fn can_reconcile_scan(was_cancelled: bool) -> bool {
+    !was_cancelled
 }
 
 #[cfg(test)]
@@ -264,9 +265,8 @@ mod tests {
     use super::can_reconcile_scan;
 
     #[test]
-    fn reconciles_only_after_a_complete_fully_readable_walk() {
-        assert!(can_reconcile_scan(false, 0));
-        assert!(!can_reconcile_scan(true, 0));
-        assert!(!can_reconcile_scan(false, 1));
+    fn reconciles_only_after_a_complete_walk() {
+        assert!(can_reconcile_scan(false));
+        assert!(!can_reconcile_scan(true));
     }
 }
