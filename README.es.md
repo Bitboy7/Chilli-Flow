@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="src/assets/chilli-flow.png" width="180" alt="Logotipo de Chilli Flow">
+</p>
+
 # Chilli Flow
 
 [English version](README.md)
@@ -243,7 +247,7 @@ cargo test --manifest-path src-tauri/Cargo.toml --no-default-features
 pnpm tauri build --bundles nsis
 ```
 
-El código actual supera **17 pruebas frontend** y **56 pruebas Rust**. Los comandos de build e instalador deben repetirse en la máquina objetivo antes de publicar.
+Los comandos de build e instalador deben repetirse en la máquina objetivo antes de publicar.
 
 ## Arquitectura
 
@@ -277,4 +281,4 @@ docs/                Notas históricas de arquitectura e hitos
 
 ## Documentación adicional
 
-Las notas históricas de diseño y arquitectura permanecen en [docs](docs/). Describen hitos anteriores; este README y [README.md](README.md) son la fuente de verdad del producto actual.
+Las notas históricas de diseño y arquitectura permanecen en [docs](docs/). Describen hitos anteriores; el [README principal en inglés](README.md) es la fuente de verdad del producto actual.
