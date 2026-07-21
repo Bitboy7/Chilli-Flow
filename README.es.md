@@ -96,6 +96,7 @@ Los workspaces creados por Chilli Beat también reconocen `Audio/Stems`, `Audio/
 - Asigna dos pistas a decks A/B y alterna entre fuentes sincronizadas.
 - Aplica compensación opcional de nivel basada en LUFS cuando ambos análisis están disponibles.
 - Reproduce WAV, MP3, FLAC y OGG directamente desde su ruta original, sin conversión.
+- Abre un espectro de frecuencias en tiempo real desde el reproductor persistente; sigue el deck A/B audible, respeta el tema y nunca modifica el audio original.
 
 M4A, AAC, AIFF y AIF pueden descubrirse y organizarse, pero el reproductor y analizador integrados actualmente están limitados a WAV, MP3, FLAC y OGG.
 

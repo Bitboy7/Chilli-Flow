@@ -96,6 +96,7 @@ Managed Chilli Beat workspaces also recognize `Audio/Stems`, `Audio/Mixes`, `Aud
 - Assign two tracks to A/B decks and switch between synchronized sources.
 - Apply optional LUFS-based level matching when both analyses are available.
 - Preview WAV, MP3, FLAC, and OGG directly from their original path without conversion.
+- Open a theme-aware real-time frequency spectrum from the persistent player; it follows the audible A/B deck and never modifies the source audio.
 
 Files such as M4A, AAC, AIFF, and AIF can be discovered and organized, but the current built-in player and analyzer are limited to WAV, MP3, FLAC, and OGG.
 
