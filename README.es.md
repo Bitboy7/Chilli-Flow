@@ -8,14 +8,14 @@
 
 Chilli Flow es un espacio de trabajo de escritorio, local-first, para productores musicales que organizan sesiones de distintos DAWs, comparan mezclas y referencias, recuperan el contexto de sus proyectos y convierten ideas incompletas en canciones terminadas.
 
-Indexa proyectos existentes sin reubicarlos, mantiene los backups vinculados a su sesión principal, descubre audio nuevo exportado dentro del proyecto y crea paquetes neutrales de colaboración sin afirmar que los formatos propietarios pueden convertirse perfectamente.
+Indexa proyectos existentes sin reubicarlos automáticamente, permite organizarlos mediante una propuesta confirmada, mantiene los backups vinculados a su sesión principal, descubre audio nuevo exportado dentro del proyecto y crea paquetes neutrales de colaboración sin afirmar que los formatos propietarios pueden convertirse perfectamente.
 
 > **Estado:** beta de escritorio activa (`0.1.0`). Windows es el flujo verificado actualmente. La arquitectura Tauri también permite apuntar a macOS y Linux, pero esas versiones todavía requieren validación específica.
 
 ## Principios del producto
 
 - **Local-first:** los metadatos permanecen en una base SQLite local; no se requiere cuenta ni servicio en la nube.
-- **No destructivo:** Chilli Flow guarda rutas y metadatos derivados. No reorganiza, mueve ni elimina los proyectos y audios originales.
+- **No destructivo por defecto:** Chilli Flow no cambia archivos sin una vista previa y confirmación explícitas. Al organizar, el usuario decide entre copiar, mover o mantener el proyecto en su ubicación; nunca se sobrescribe un destino.
 - **Neutral respecto al DAW:** los archivos `.flp`, `.als`, `.rpp` y otras sesiones nativas conservan su formato y se abren con su DAW original.
 - **Enfocado en producción:** organización, escucha, comparación, planificación de cierre, versiones y handoff conviven en un mismo workspace.
 
@@ -39,7 +39,7 @@ Indexa proyectos existentes sin reubicarlos, mantiene los backups vinculados a s
 - Mantiene la edición del nombre visual separada del renombrado físico validado.
 - Configura carpetas del proyecto para stems, mezclas, masters y referencias.
 
-> El BPM y la tonalidad son actualmente metadatos administrados por el usuario. La detección automática de tempo y tonalidad todavía no está implementada.
+> Al analizar audio compatible se estiman automáticamente el BPM y la tonalidad, y los resultados disponibles se asignan al proyecto. Estas estimaciones siguen siendo editables porque los ritmos complejos, las modulaciones y el material disperso pueden requerir corrección manual.
 
 ### Workspaces administrados
 
@@ -61,7 +61,9 @@ Nombre del proyecto/
 
 Chilli Flow nunca fabrica una sesión propietaria. Con una plantilla compatible, copia el proyecto real dentro de `Project Files`; sin plantilla, el workspace espera el primer guardado desde el DAW seleccionado y vincula esa sesión durante el siguiente escaneo de biblioteca.
 
-Los proyectos existentes también pueden previsualizar y aplicar una propuesta de carpetas adaptada al DAW. Solo se crean los directorios faltantes; los archivos existentes nunca se mueven.
+Los proyectos existentes también pueden previsualizar una raíz individual y una propuesta adaptada al DAW. Si el archivo está suelto, el usuario elige entre **copiar y organizar** (recomendado), **mover y organizar** o **crear solo la estructura**. La propuesta muestra origen, destino, carpetas y riesgos antes de confirmar. Una copia conserva el original como versión confirmada; un movimiento mantiene la identidad y los metadatos del proyecto. Si el proyecto ya tiene una raíz dedicada, Chilli Flow la reutiliza sin crear una carpeta anidada.
+
+El diseño, las garantías, los casos de colisión y la recuperación de este flujo están documentados en [Organización de proyectos existentes](docs/project-organization.md).
 
 ### Descubrimiento automático de audio
 
@@ -109,6 +111,7 @@ M4A, AAC, AIFF y AIF pueden descubrirse y organizarse, pero el reproductor y ana
 El análisis de un archivo compatible obtiene:
 
 - Duración, sample rate, bit depth y número de canales.
+- BPM y tonalidad estimados, asignados automáticamente al proyecto y disponibles para corrección manual.
 - LUFS integrado, rango de sonoridad y true peak.
 - Una forma de onda de amplitud normalizada, amplia y con marcadores de tiempo.
 - Observaciones técnicas basadas en reglas para nivel, margen de pico y dinámica.
@@ -185,7 +188,7 @@ Desde Configuración pueden añadirse extensiones seguras sin reemplazar el cat�
 
 ## Datos locales y seguridad
 
-- Metadatos, historial de escaneos, Finish Mode, reproducción, análisis, historial de handoffs y estado de archivos descubiertos se almacenan en SQLite con esquema v10.
+- Metadatos, historial de escaneos, Finish Mode, reproducción, análisis, historial de handoffs y estado de archivos descubiertos se almacenan en SQLite con esquema v11.
 - Artwork y audio permanecen en el disco; los medios no se guardan como blobs en la base de datos.
 - Los escaneos de biblioteca solo comienzan cuando se solicitan y pueden cancelarse.
 - La sincronización de audio lee únicamente carpetas reconocidas o configuradas explícitamente para el proyecto.
@@ -273,7 +276,7 @@ docs/                Notas históricas de arquitectura e hitos
 
 - Las estructuras internas de proyectos nativos no se convierten entre DAWs.
 - Un handoff no puede conservar todos los routings, automatizaciones, plugins, instrumentos virtuales, presets, sidechains, marcadores, mapas de tempo o ediciones específicas del DAW.
-- El BPM y la tonalidad todavía no se detectan automáticamente desde audio.
+- La detección automática de BPM y tonalidad es heurística; los ritmos complejos, cambios de tempo, modulaciones o material disperso pueden producir estimaciones que requieran corrección manual.
 - La indexación de biblioteca requiere una acción del usuario. El descubrimiento de audio se actualiza al abrir la pestaña, recuperar el foco o pulsar Actualizar; no existe un watcher permanente.
 - La agrupación de backups es conservadora y las coincidencias ambiguas requieren confirmación.
 - El comportamiento de codecs puede depender del webview del sistema operativo.

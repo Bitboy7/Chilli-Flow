@@ -1,4 +1,8 @@
-use std::{collections::HashSet, fs, path::{Path, PathBuf}};
+use std::{
+    collections::HashSet,
+    fs,
+    path::{Path, PathBuf},
+};
 
 use walkdir::WalkDir;
 
@@ -45,27 +49,32 @@ impl ProjectFileService {
 
     pub fn sync(state: &AppState, project_id: i64) -> AppResult<SyncProjectFilesResult> {
         let detail = ProjectDetailService::get(state, project_id)?;
-        let authorized = super::project_detail_service::authorized_existing_project(state, project_id)?;
+        let authorized =
+            super::project_detail_service::authorized_existing_project(state, project_id)?;
         let root = project_root(&detail, &authorized)?;
         let folders = discovery_folders(&detail, &root);
         let (prepared, scanned_folders) = discover_files(&root, folders);
-        let discovered = prepared.iter().map(|entry| DiscoveredProjectFile {
-            path: &entry.file.path,
-            name: &entry.file.name,
-            file_type: &entry.file.file_type,
-            size: entry.file.size,
-            category: entry.category,
-            source_label: &entry.source_label,
-            relative_path: &entry.relative_path,
-        }).collect::<Vec<_>>();
+        let discovered = prepared
+            .iter()
+            .map(|entry| DiscoveredProjectFile {
+                path: &entry.file.path,
+                name: &entry.file.name,
+                file_type: &entry.file.file_type,
+                size: entry.file.size,
+                category: entry.category,
+                source_label: &entry.source_label,
+                relative_path: &entry.relative_path,
+            })
+            .collect::<Vec<_>>();
         let mut connection = state.database().connection()?;
-        let discovered_count = ProjectFileRepository::sync_discovered(
-            &mut connection,
-            project_id,
-            &discovered,
-        )?;
+        let discovered_count =
+            ProjectFileRepository::sync_discovered(&mut connection, project_id, &discovered)?;
         let files = ProjectFileRepository::list(&connection, project_id)?;
-        Ok(SyncProjectFilesResult { files, discovered_count, scanned_folders })
+        Ok(SyncProjectFilesResult {
+            files,
+            discovered_count,
+            scanned_folders,
+        })
     }
 
     pub fn add(
@@ -74,10 +83,19 @@ impl ProjectFileService {
         category: ProjectFileCategory,
         selected: Vec<PathBuf>,
     ) -> AppResult<Vec<ProjectFile>> {
-        let prepared = selected.iter().map(|path| prepare_file(path)).collect::<AppResult<Vec<_>>>()?;
-        let files = prepared.iter().map(|file| NewProjectFile {
-            path: &file.path, name: &file.name, file_type: &file.file_type, size: file.size,
-        }).collect::<Vec<_>>();
+        let prepared = selected
+            .iter()
+            .map(|path| prepare_file(path))
+            .collect::<AppResult<Vec<_>>>()?;
+        let files = prepared
+            .iter()
+            .map(|file| NewProjectFile {
+                path: &file.path,
+                name: &file.name,
+                file_type: &file.file_type,
+                size: file.size,
+            })
+            .collect::<Vec<_>>();
         let mut connection = state.database().connection()?;
         ProjectFileRepository::add_batch(&mut connection, project_id, category, &files)
     }
@@ -124,7 +142,9 @@ impl ProjectFileService {
             let connection = state.database().connection()?;
             ProjectFileRepository::get(&connection, file_id)?
         };
-        if file.project_id != project_id { return Err(AppError::AssociatedFileNotFound); }
+        if file.project_id != project_id {
+            return Err(AppError::AssociatedFileNotFound);
+        }
         dunce::canonicalize(file.file_path).map_err(AppError::FileOperation)
     }
 }
@@ -140,72 +160,198 @@ fn project_root(detail: &ProjectDetail, authorized: &Path) -> AppResult<PathBuf>
     if authorized.is_dir() {
         Ok(authorized.to_path_buf())
     } else {
-        authorized.parent().map(Path::to_path_buf)
-            .ok_or_else(|| AppError::InvalidProject("el archivo no tiene una carpeta de proyecto".into()))
+        authorized.parent().map(Path::to_path_buf).ok_or_else(|| {
+            AppError::InvalidProject("el archivo no tiene una carpeta de proyecto".into())
+        })
     }
 }
 
 fn discovery_folders(detail: &ProjectDetail, root: &Path) -> Vec<DiscoveryFolder> {
     let mut folders = Vec::new();
+    let configured = [
+        (ProjectFileCategory::Stem, detail.folders.stems.is_some()),
+        (ProjectFileCategory::Mix, detail.folders.mixes.is_some()),
+        (
+            ProjectFileCategory::Master,
+            detail.folders.masters.is_some(),
+        ),
+        (
+            ProjectFileCategory::Reference,
+            detail.folders.references.is_some(),
+        ),
+    ];
     for (path, category, label) in [
-        (detail.folders.stems.as_deref(), ProjectFileCategory::Stem, "Stems configurados"),
-        (detail.folders.mixes.as_deref(), ProjectFileCategory::Mix, "Mezclas configuradas"),
-        (detail.folders.masters.as_deref(), ProjectFileCategory::Master, "Masters configurados"),
-        (detail.folders.references.as_deref(), ProjectFileCategory::Reference, "Referencias configuradas"),
+        (
+            detail.folders.stems.as_deref(),
+            ProjectFileCategory::Stem,
+            "Stems configurados",
+        ),
+        (
+            detail.folders.mixes.as_deref(),
+            ProjectFileCategory::Mix,
+            "Mezclas configuradas",
+        ),
+        (
+            detail.folders.masters.as_deref(),
+            ProjectFileCategory::Master,
+            "Masters configurados",
+        ),
+        (
+            detail.folders.references.as_deref(),
+            ProjectFileCategory::Reference,
+            "Referencias configuradas",
+        ),
     ] {
         if let Some(path) = path {
-            folders.push(DiscoveryFolder { path: PathBuf::from(path), category, label });
+            folders.push(DiscoveryFolder {
+                path: PathBuf::from(path),
+                category,
+                label,
+            });
         }
     }
-    folders.extend(default_folders(root, &detail.daw));
+    folders.extend(
+        default_folders(root, &detail.daw)
+            .into_iter()
+            .filter(|folder| {
+                !configured
+                    .iter()
+                    .any(|(category, present)| *present && *category == folder.category)
+            }),
+    );
     folders
 }
 
 fn default_folders(root: &Path, daw: &str) -> Vec<DiscoveryFolder> {
     let mut folders = vec![
-        folder(root, "Audio/Stems", ProjectFileCategory::Stem, "Audio / Stems"),
-        folder(root, "Audio/Mixes", ProjectFileCategory::Mix, "Audio / Mezclas"),
-        folder(root, "Audio/Masters", ProjectFileCategory::Master, "Audio / Masters"),
-        folder(root, "References", ProjectFileCategory::Reference, "Referencias"),
+        folder(
+            root,
+            "Audio/Stems",
+            ProjectFileCategory::Stem,
+            "Audio / Stems",
+        ),
+        folder(
+            root,
+            "Audio/Mixes",
+            ProjectFileCategory::Mix,
+            "Audio / Mezclas",
+        ),
+        folder(
+            root,
+            "Audio/Masters",
+            ProjectFileCategory::Master,
+            "Audio / Masters",
+        ),
+        folder(
+            root,
+            "References",
+            ProjectFileCategory::Reference,
+            "Referencias",
+        ),
     ];
     if daw.to_ascii_lowercase().contains("fl studio") {
-        folders.splice(0..0, [
-            folder(root, "Renders/Stems", ProjectFileCategory::Stem, "Renders / Stems"),
-            folder(root, "Renders/Mixes", ProjectFileCategory::Mix, "Renders / Mezclas"),
-            folder(root, "Renders/Masters", ProjectFileCategory::Master, "Renders / Masters"),
-        ]);
+        folders.splice(
+            0..0,
+            [
+                folder(
+                    root,
+                    "Renders/Stems",
+                    ProjectFileCategory::Stem,
+                    "Renders / Stems",
+                ),
+                folder(
+                    root,
+                    "Renders/Mixes",
+                    ProjectFileCategory::Mix,
+                    "Renders / Mezclas",
+                ),
+                folder(
+                    root,
+                    "Renders/Masters",
+                    ProjectFileCategory::Master,
+                    "Renders / Masters",
+                ),
+            ],
+        );
         folders.extend([
             folder(root, "Renders", ProjectFileCategory::Mix, "Renders"),
-            folder(root, "Audio", ProjectFileCategory::Sample, "Audio del proyecto"),
+            folder(
+                root,
+                "Audio",
+                ProjectFileCategory::Sample,
+                "Audio del proyecto",
+            ),
             folder(root, "Samples", ProjectFileCategory::Sample, "Samples"),
         ]);
     }
     folders
 }
 
-fn folder(root: &Path, relative: &str, category: ProjectFileCategory, label: &'static str) -> DiscoveryFolder {
-    DiscoveryFolder { path: root.join(relative), category, label }
+fn folder(
+    root: &Path,
+    relative: &str,
+    category: ProjectFileCategory,
+    label: &'static str,
+) -> DiscoveryFolder {
+    DiscoveryFolder {
+        path: root.join(relative),
+        category,
+        label,
+    }
 }
 
-fn discover_files(root: &Path, folders: Vec<DiscoveryFolder>) -> (Vec<PreparedDiscoveredFile>, usize) {
+fn discover_files(
+    root: &Path,
+    folders: Vec<DiscoveryFolder>,
+) -> (Vec<PreparedDiscoveredFile>, usize) {
     let mut files = Vec::new();
     let mut seen_folders = HashSet::new();
     let mut seen_files = HashSet::new();
     let mut scanned_folders = 0;
     for folder in folders {
-        let Ok(folder_path) = dunce::canonicalize(&folder.path) else { continue; };
-        if !folder_path.is_dir() || !seen_folders.insert(folder_path.clone()) { continue; }
+        let Ok(folder_path) = dunce::canonicalize(&folder.path) else {
+            continue;
+        };
+        if !folder_path.is_dir() || !seen_folders.insert(folder_path.clone()) {
+            continue;
+        }
         scanned_folders += 1;
-        for entry in WalkDir::new(&folder_path).max_depth(6).follow_links(false).into_iter().filter_map(Result::ok) {
-            if files.len() >= MAX_DISCOVERED_FILES { break; }
-            if !entry.file_type().is_file() { continue; }
-            let extension = entry.path().extension().and_then(|value| value.to_str()).unwrap_or("").to_ascii_lowercase();
-            if !DISCOVERABLE_AUDIO.contains(&extension.as_str()) { continue; }
-            let Ok(path) = dunce::canonicalize(entry.path()) else { continue; };
-            if !seen_files.insert(path.clone()) { continue; }
-            let Ok(prepared) = prepare_file(&path) else { continue; };
-            let relative_path = path.strip_prefix(root).or_else(|_| path.strip_prefix(&folder_path))
-                .unwrap_or(path.as_path()).to_string_lossy().replace('\\', "/");
+        for entry in WalkDir::new(&folder_path)
+            .max_depth(6)
+            .follow_links(false)
+            .into_iter()
+            .filter_map(Result::ok)
+        {
+            if files.len() >= MAX_DISCOVERED_FILES {
+                break;
+            }
+            if !entry.file_type().is_file() {
+                continue;
+            }
+            let extension = entry
+                .path()
+                .extension()
+                .and_then(|value| value.to_str())
+                .unwrap_or("")
+                .to_ascii_lowercase();
+            if !DISCOVERABLE_AUDIO.contains(&extension.as_str()) {
+                continue;
+            }
+            let Ok(path) = dunce::canonicalize(entry.path()) else {
+                continue;
+            };
+            if !seen_files.insert(path.clone()) {
+                continue;
+            }
+            let Ok(prepared) = prepare_file(&path) else {
+                continue;
+            };
+            let relative_path = path
+                .strip_prefix(root)
+                .or_else(|_| path.strip_prefix(&folder_path))
+                .unwrap_or(path.as_path())
+                .to_string_lossy()
+                .replace('\\', "/");
             files.push(PreparedDiscoveredFile {
                 file: prepared,
                 category: folder.category,
@@ -213,7 +359,9 @@ fn discover_files(root: &Path, folders: Vec<DiscoveryFolder>) -> (Vec<PreparedDi
                 relative_path,
             });
         }
-        if files.len() >= MAX_DISCOVERED_FILES { break; }
+        if files.len() >= MAX_DISCOVERED_FILES {
+            break;
+        }
     }
     (files, scanned_folders)
 }
@@ -221,19 +369,36 @@ fn discover_files(root: &Path, folders: Vec<DiscoveryFolder>) -> (Vec<PreparedDi
 fn prepare_file(path: &Path) -> AppResult<PreparedFile> {
     let path = dunce::canonicalize(path).map_err(AppError::FileOperation)?;
     let metadata = fs::metadata(&path).map_err(AppError::FileOperation)?;
-    if !metadata.is_file() { return Err(AppError::InvalidPath("se esperaba un archivo".into())); }
-    let name = path.file_name().and_then(|value| value.to_str())
-        .ok_or_else(|| AppError::InvalidPath("nombre no representable en UTF-8".into()))?.to_owned();
-    let file_type = path.extension().and_then(|value| value.to_str()).unwrap_or("").to_ascii_lowercase();
+    if !metadata.is_file() {
+        return Err(AppError::InvalidPath("se esperaba un archivo".into()));
+    }
+    let name = path
+        .file_name()
+        .and_then(|value| value.to_str())
+        .ok_or_else(|| AppError::InvalidPath("nombre no representable en UTF-8".into()))?
+        .to_owned();
+    let file_type = path
+        .extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
     Ok(PreparedFile {
-        path: path.to_string_lossy().into_owned(), name, file_type,
+        path: path.to_string_lossy().into_owned(),
+        name,
+        file_type,
         size: i64::try_from(metadata.len()).unwrap_or(i64::MAX),
     })
 }
 
 fn validate_audio(path: &Path) -> AppResult<()> {
-    let extension = path.extension().and_then(|value| value.to_str()).unwrap_or("");
-    if ["wav", "mp3", "flac", "ogg"].iter().any(|known| extension.eq_ignore_ascii_case(known)) {
+    let extension = path
+        .extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or("");
+    if ["wav", "mp3", "flac", "ogg"]
+        .iter()
+        .any(|known| extension.eq_ignore_ascii_case(known))
+    {
         Ok(())
     } else {
         Err(AppError::UnsupportedAudio)
@@ -267,9 +432,15 @@ mod tests {
         let (files, scanned) = discover_files(root, default_folders(root, "FL Studio"));
         assert!(scanned >= 2);
         assert_eq!(files.len(), 2);
-        assert!(files.iter().any(|file| file.category == ProjectFileCategory::Mix));
-        assert!(files.iter().any(|file| file.category == ProjectFileCategory::Stem));
-        assert!(files.iter().all(|file| !file.relative_path.contains("Backup")));
+        assert!(files
+            .iter()
+            .any(|file| file.category == ProjectFileCategory::Mix));
+        assert!(files
+            .iter()
+            .any(|file| file.category == ProjectFileCategory::Stem));
+        assert!(files
+            .iter()
+            .all(|file| !file.relative_path.contains("Backup")));
     }
 
     #[test]
@@ -277,7 +448,11 @@ mod tests {
         let root = Path::new("C:/Music/get dark");
         let folders = default_folders(root, "FL Studio");
         assert!(folders.iter().any(|folder| folder.path.ends_with("Audio")));
-        assert!(folders.iter().any(|folder| folder.path.ends_with("Samples")));
-        assert!(folders.iter().all(|folder| !folder.path.ends_with("Backup") && !folder.path.ends_with("Backups")));
+        assert!(folders
+            .iter()
+            .any(|folder| folder.path.ends_with("Samples")));
+        assert!(folders
+            .iter()
+            .all(|folder| !folder.path.ends_with("Backup") && !folder.path.ends_with("Backups")));
     }
 }

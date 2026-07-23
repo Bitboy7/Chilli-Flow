@@ -2,7 +2,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
-  openProjectAssetFolder, projectAudioUrl, removeProjectFile, renameProjectFile,
+  applyProjectFolderSetup, openProjectAssetFolder, previewProjectFolderSetup, projectAudioUrl,
+  removeProjectFile, renameProjectFile,
   setProjectFavorite, setProjectFileCategory, setProjectPreview, syncProjectFiles, updateProject,
 } from "./project-service";
 
@@ -75,5 +76,17 @@ describe("project service command contracts", () => {
     vi.mocked(invoke).mockResolvedValue({ files: [], discoveredCount: 0, scannedFolders: 3 });
     await syncProjectFiles(7);
     expect(invoke).toHaveBeenCalledWith("sync_project_files", { projectId: 7 });
+  });
+
+  it("previews the chosen organization method and applies only its token", async () => {
+    vi.mocked(invoke).mockResolvedValue({ token: 42 });
+    await previewProjectFolderSetup(7, "copy");
+    await applyProjectFolderSetup(7, 42);
+    expect(invoke).toHaveBeenNthCalledWith(1, "preview_project_folder_setup", {
+      projectId: 7, method: "copy",
+    });
+    expect(invoke).toHaveBeenNthCalledWith(2, "apply_project_folder_setup", {
+      projectId: 7, token: 42,
+    });
   });
 });

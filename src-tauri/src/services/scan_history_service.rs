@@ -1,7 +1,5 @@
 use crate::{
-    errors::AppResult,
-    models::ScanHistoryPage,
-    repositories::ScanHistoryRepository,
+    errors::AppResult, models::ScanHistoryPage, repositories::ScanHistoryRepository,
     state::AppState,
 };
 

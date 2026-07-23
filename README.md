@@ -8,14 +8,14 @@
 
 Chilli Flow is a local-first desktop workspace for music producers who organize sessions from multiple DAWs, compare mixes and references, recover project context, and turn unfinished ideas into completed tracks.
 
-It indexes existing projects without relocating them, keeps backups linked to their main sessions, discovers newly exported audio inside projects, and creates neutral collaboration packages without claiming that proprietary formats can be converted perfectly.
+It indexes existing projects without relocating them automatically, offers an explicitly confirmed organization flow, keeps backups linked to their main sessions, discovers newly exported audio inside projects, and creates neutral collaboration packages without claiming that proprietary formats can be converted perfectly.
 
 > **Status:** active desktop beta (`0.1.0`). Windows is the currently verified workflow. The Tauri architecture can also target macOS and Linux, but those builds still require platform-specific validation.
 
 ## Product principles
 
 - **Local-first:** metadata stays in a local SQLite database; no account or cloud service is required.
-- **Non-destructive:** Chilli Flow stores paths and derived metadata. It does not reorganize, move, or delete original project and audio files.
+- **Non-destructive by default:** Chilli Flow changes no file without a detailed preview and explicit confirmation. During organization, the user chooses whether to copy, move, or keep the project in place; destinations are never overwritten.
 - **DAW-neutral:** `.flp`, `.als`, `.rpp`, and other native sessions keep their original format and open in their original DAW.
 - **Production-focused:** organization, listening, comparison, completion planning, version management, and handoff live in one workspace.
 
@@ -39,7 +39,7 @@ It indexes existing projects without relocating them, keeps backups linked to th
 - Keeps display-name editing separate from validated physical file renaming.
 - Configures project folders for stems, mixes, masters, and references.
 
-> BPM and key are currently user-managed metadata. Automatic tempo and key detection are not implemented yet.
+> Analyzing compatible audio automatically estimates BPM and key and assigns the available results to the project. These estimates remain editable because complex rhythms, modulations, and sparse material can require manual correction.
 
 ### Managed workspaces
 
@@ -61,7 +61,9 @@ Project name/
 
 Chilli Flow never fabricates a proprietary session. With a compatible template, it copies the real project into `Project Files`; without a template, the workspace waits for the first save from the selected DAW and links that session during the next library scan.
 
-Existing projects can also preview and apply a DAW-aware folder proposal. Only missing directories are created; existing files are never moved.
+Existing projects can preview an individual root and a DAW-aware folder proposal. For a loose project file, the user chooses **copy and organize** (recommended), **move and organize**, or **create folders only**. The preview exposes source, destination, folders, and risks before confirmation. Copying keeps the original as a confirmed version; moving preserves the project's identity and metadata. Projects that already have a dedicated root reuse it without creating a nested duplicate.
+
+The design, guarantees, collision behavior, and recovery model are documented in [Existing project organization](docs/project-organization.md).
 
 ### Automatic audio discovery
 
@@ -109,6 +111,7 @@ M4A, AAC, AIFF, and AIF files can be discovered and organized, but the built-in 
 Analysis of a compatible file provides:
 
 - Duration, sample rate, bit depth, and channel count.
+- Estimated BPM and musical key, automatically assigned to the project and available for manual correction.
 - Integrated LUFS, loudness range, and true peak.
 - A normalized-amplitude waveform with time markers.
 - Rule-based technical observations for level, peak headroom, and dynamics.
@@ -185,7 +188,7 @@ Additional safe extensions can be added in Settings without replacing the built-
 
 ## Local data and security
 
-- Metadata, scan history, Finish Mode, playback, analysis, handoff history, and discovered-file state are stored in SQLite using schema v10.
+- Metadata, scan history, Finish Mode, playback, analysis, handoff history, and discovered-file state are stored in SQLite using schema v11.
 - Artwork and audio stay on disk; media is not stored as blobs in the database.
 - Library scans start only when requested and can be cancelled.
 - Audio synchronization reads only recognized folders or folders explicitly configured for the project.
@@ -273,7 +276,7 @@ docs/                Historical architecture and milestone notes
 
 - Native project internals are not converted between DAWs.
 - A handoff cannot preserve every routing, automation, plugin, virtual instrument, preset, sidechain, marker, tempo map, or DAW-specific edit.
-- BPM and key are not yet detected automatically from audio.
+- Automatic BPM and key detection is heuristic; complex rhythms, tempo changes, modulations, or sparse material can produce estimates that need manual correction.
 - Library indexing requires a user action. Audio discovery refreshes when the tab opens, the application regains focus, or the user selects Refresh; there is no permanent watcher.
 - Backup grouping is conservative, and ambiguous matches require confirmation.
 - Codec behavior can depend on the operating system's webview.

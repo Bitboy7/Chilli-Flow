@@ -1,4 +1,8 @@
-use std::{fs, io::Cursor, path::{Component, Path, PathBuf}};
+use std::{
+    fs,
+    io::Cursor,
+    path::{Component, Path, PathBuf},
+};
 
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 
@@ -36,8 +40,8 @@ impl ProjectDetailService {
     }
 
     pub fn set_cover(state: &AppState, project_id: i64, selected: &Path) -> AppResult<()> {
-        let canonical = dunce::canonicalize(selected)
-            .map_err(|error| AppError::FileOperation(error))?;
+        let canonical =
+            dunce::canonicalize(selected).map_err(|error| AppError::FileOperation(error))?;
         validate_cover(&canonical)?;
         let path = canonical.to_string_lossy().into_owned();
         let connection = state.database().connection()?;
@@ -51,7 +55,9 @@ impl ProjectDetailService {
 
     pub fn cover_asset(state: &AppState, project_id: i64) -> AppResult<Option<CoverAsset>> {
         let detail = Self::get(state, project_id)?;
-        let Some(path) = detail.cover_path else { return Ok(None); };
+        let Some(path) = detail.cover_path else {
+            return Ok(None);
+        };
         let path = Path::new(&path);
         validate_cover(path)?;
         let bytes = thumbnail_bytes(path)?;
@@ -73,18 +79,22 @@ impl ProjectDetailService {
                 ProjectDetailRepository::watched_paths(&connection)?,
             )
         };
-        let source = dunce::canonicalize(&detail.file_path)
-            .map_err(AppError::FileOperation)?;
+        let source = dunce::canonicalize(&detail.file_path).map_err(AppError::FileOperation)?;
         authorize_project_path(&source, &watched_paths)?;
-        let parent = source.parent().ok_or_else(|| AppError::InvalidProject("ruta sin carpeta padre".into()))?;
+        let parent = source
+            .parent()
+            .ok_or_else(|| AppError::InvalidProject("ruta sin carpeta padre".into()))?;
         let target = parent.join(format!("{new_stem}{}", detail.extension));
         if target.exists() {
-            return Err(AppError::InvalidProject("ya existe un archivo con ese nombre".into()));
+            return Err(AppError::InvalidProject(
+                "ya existe un archivo con ese nombre".into(),
+            ));
         }
 
         fs::rename(&source, &target).map_err(AppError::FileOperation)?;
         let target_string = target.to_string_lossy().into_owned();
-        let original_name = target.file_name()
+        let original_name = target
+            .file_name()
             .and_then(|name| name.to_str())
             .ok_or_else(|| AppError::InvalidProject("nombre no representable en UTF-8".into()))?;
         let database_result = {
@@ -116,9 +126,9 @@ impl ProjectDetailService {
             let root = dunce::canonicalize(root).map_err(AppError::FileOperation)?;
             platform::open_path(&root)
         } else {
-            let folder = path.parent().ok_or_else(|| {
-                AppError::InvalidProject("ruta sin carpeta padre".into())
-            })?;
+            let folder = path
+                .parent()
+                .ok_or_else(|| AppError::InvalidProject("ruta sin carpeta padre".into()))?;
             platform::open_path(folder)
         }
     }
@@ -162,7 +172,10 @@ impl ProjectDetailService {
             ProjectFolderCategory::Mixes => detail.folders.mixes,
             ProjectFolderCategory::Masters => detail.folders.masters,
             ProjectFolderCategory::References => detail.folders.references,
-        }.ok_or_else(|| AppError::InvalidProject("no hay una carpeta configurada para esa categoría".into()))?;
+        }
+        .ok_or_else(|| {
+            AppError::InvalidProject("no hay una carpeta configurada para esa categoría".into())
+        })?;
         let path = platform::canonicalize_directory(&selected)?;
         platform::open_path(&path)
     }
@@ -196,32 +209,63 @@ pub(crate) fn authorize_project_path(path: &Path, watched_paths: &[String]) -> A
             .map(|folder| path.starts_with(folder))
             .unwrap_or(false)
     });
-    if authorized { Ok(()) } else { Err(AppError::UnauthorizedProjectPath) }
+    if authorized {
+        Ok(())
+    } else {
+        Err(AppError::UnauthorizedProjectPath)
+    }
 }
 
 fn normalize_input(mut input: UpdateProjectInput) -> AppResult<UpdateProjectInput> {
     input.display_name = input.display_name.trim().to_owned();
     if input.display_name.is_empty() || input.display_name.chars().count() > 200 {
-        return Err(AppError::InvalidProject("el nombre visual debe tener entre 1 y 200 caracteres".into()));
+        return Err(AppError::InvalidProject(
+            "el nombre visual debe tener entre 1 y 200 caracteres".into(),
+        ));
     }
-    if input.bpm.is_some_and(|bpm| !bpm.is_finite() || bpm <= 0.0 || bpm >= 1000.0) {
-        return Err(AppError::InvalidProject("el BPM debe estar entre 0 y 1000".into()));
+    if input
+        .bpm
+        .is_some_and(|bpm| !bpm.is_finite() || bpm <= 0.0 || bpm >= 1000.0)
+    {
+        return Err(AppError::InvalidProject(
+            "el BPM debe estar entre 0 y 1000".into(),
+        ));
     }
     input.musical_key = normalize_optional(input.musical_key, 32, "tonalidad")?;
     input.genre = normalize_optional(input.genre, 100, "género")?;
     input.notes = normalize_optional(input.notes, 10_000, "notas")?;
-    if input.rating.is_some_and(|rating| !(0..=5).contains(&rating)) {
-        return Err(AppError::InvalidProject("la calificación debe estar entre 0 y 5".into()));
+    if input
+        .rating
+        .is_some_and(|rating| !(0..=5).contains(&rating))
+    {
+        return Err(AppError::InvalidProject(
+            "la calificación debe estar entre 0 y 5".into(),
+        ));
     }
     input.status = input.status.trim().to_owned();
-    if input.status.is_empty() { return Err(AppError::InvalidProject("el estado es obligatorio".into())); }
-    if input.tags.len() > 20 { return Err(AppError::InvalidProject("se permiten hasta 20 etiquetas".into())); }
+    if input.status.is_empty() {
+        return Err(AppError::InvalidProject("el estado es obligatorio".into()));
+    }
+    if input.tags.len() > 20 {
+        return Err(AppError::InvalidProject(
+            "se permiten hasta 20 etiquetas".into(),
+        ));
+    }
     let mut tags = Vec::new();
     for tag in input.tags {
         let tag = tag.trim();
-        if tag.is_empty() { continue; }
-        if tag.chars().count() > 40 { return Err(AppError::InvalidProject("cada etiqueta admite hasta 40 caracteres".into())); }
-        if !tags.iter().any(|existing: &String| existing.eq_ignore_ascii_case(tag)) {
+        if tag.is_empty() {
+            continue;
+        }
+        if tag.chars().count() > 40 {
+            return Err(AppError::InvalidProject(
+                "cada etiqueta admite hasta 40 caracteres".into(),
+            ));
+        }
+        if !tags
+            .iter()
+            .any(|existing: &String| existing.eq_ignore_ascii_case(tag))
+        {
             tags.push(tag.to_owned());
         }
     }
@@ -230,11 +274,17 @@ fn normalize_input(mut input: UpdateProjectInput) -> AppResult<UpdateProjectInpu
 }
 
 fn normalize_optional(value: Option<String>, max: usize, field: &str) -> AppResult<Option<String>> {
-    let Some(value) = value else { return Ok(None); };
+    let Some(value) = value else {
+        return Ok(None);
+    };
     let value = value.trim();
-    if value.is_empty() { return Ok(None); }
+    if value.is_empty() {
+        return Ok(None);
+    }
     if value.chars().count() > max {
-        return Err(AppError::InvalidProject(format!("{field} supera {max} caracteres")));
+        return Err(AppError::InvalidProject(format!(
+            "{field} supera {max} caracteres"
+        )));
     }
     Ok(Some(value.to_owned()))
 }
@@ -245,16 +295,24 @@ fn validate_file_stem(value: &str) -> AppResult<&str> {
     let valid_component = path.components().count() == 1
         && matches!(path.components().next(), Some(Component::Normal(_)));
     if value.is_empty() || value.chars().count() > 200 || !valid_component || value.ends_with('.') {
-        return Err(AppError::InvalidProject("el nuevo nombre no es válido".into()));
+        return Err(AppError::InvalidProject(
+            "el nuevo nombre no es válido".into(),
+        ));
     }
     Ok(value)
 }
 
 fn validate_cover(path: &Path) -> AppResult<()> {
     let metadata = fs::metadata(path).map_err(AppError::FileOperation)?;
-    if !metadata.is_file() { return Err(AppError::UnsupportedImage); }
-    if metadata.len() > MAX_COVER_BYTES { return Err(AppError::CoverTooLarge); }
-    cover_mime(path).map(|_| ()).ok_or(AppError::UnsupportedImage)
+    if !metadata.is_file() {
+        return Err(AppError::UnsupportedImage);
+    }
+    if metadata.len() > MAX_COVER_BYTES {
+        return Err(AppError::CoverTooLarge);
+    }
+    cover_mime(path)
+        .map(|_| ())
+        .ok_or(AppError::UnsupportedImage)
 }
 
 fn cover_mime(path: &Path) -> Option<&'static str> {
@@ -278,7 +336,8 @@ fn thumbnail_bytes(path: &Path) -> AppResult<Vec<u8>> {
         .map_err(|error| AppError::ImageProcessing(error.to_string()))?;
     let thumbnail = image.thumbnail(640, 400);
     let mut output = Cursor::new(Vec::new());
-    thumbnail.write_to(&mut output, image::ImageFormat::Png)
+    thumbnail
+        .write_to(&mut output, image::ImageFormat::Png)
         .map_err(|error| AppError::ImageProcessing(error.to_string()))?;
     Ok(output.into_inner())
 }
@@ -297,10 +356,16 @@ mod tests {
     #[test]
     fn normalizes_tags_and_optional_fields() {
         let input = normalize_input(UpdateProjectInput {
-            display_name: "  Demo  ".into(), bpm: Some(120.0), musical_key: Some(" ".into()),
-            genre: None, status: "idea".into(), rating: Some(4), notes: None,
+            display_name: "  Demo  ".into(),
+            bpm: Some(120.0),
+            musical_key: Some(" ".into()),
+            genre: None,
+            status: "idea".into(),
+            rating: Some(4),
+            notes: None,
             tags: vec![" Client ".into(), "client".into(), "".into()],
-        }).expect("valid input");
+        })
+        .expect("valid input");
         assert_eq!(input.display_name, "Demo");
         assert_eq!(input.musical_key, None);
         assert_eq!(input.tags, vec!["Client"]);
@@ -310,7 +375,9 @@ mod tests {
     fn cover_thumbnail_is_bounded_for_large_artwork() {
         let directory = tempfile::tempdir().expect("directory");
         let path = directory.path().join("cover.png");
-        image::DynamicImage::new_rgb8(1600, 1200).save(&path).expect("save image");
+        image::DynamicImage::new_rgb8(1600, 1200)
+            .save(&path)
+            .expect("save image");
         let bytes = thumbnail_bytes(&path).expect("thumbnail");
         let thumbnail = image::load_from_memory(&bytes).expect("decode thumbnail");
         assert!(thumbnail.width() <= 640);

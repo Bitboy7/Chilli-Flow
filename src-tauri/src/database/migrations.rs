@@ -12,7 +12,8 @@ const MIGRATIONS: &[(i64, &str)] = &[
     (7, include_str!("migrations/0007_project_versions.sql")),
     (8, include_str!("migrations/0008_managed_workspaces.sql")),
     (9, include_str!("migrations/0009_universal_handoff.sql")),
-    (10, include_str!("migrations/0010_project_file_discovery.sql")),
+        (10, include_str!("migrations/0010_project_file_discovery.sql")),
+    (11, include_str!("migrations/0011_audio_tempo_key.sql")),
 ];
 
 pub fn run(connection: &mut Connection) -> AppResult<()> {
