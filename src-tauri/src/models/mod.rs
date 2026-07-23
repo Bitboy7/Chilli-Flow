@@ -16,7 +16,7 @@ mod workspace;
 
 pub use app_status::AppStatus;
 pub use custom_extension::{CustomExtension, ExtensionCatalogItem};
-pub use folder_setup::{FolderSetupItem, FolderSetupPlan};
+pub use folder_setup::{FolderSetupItem, FolderSetupMethod, FolderSetupPlan};
 pub use finish_mode::{
     FinishDashboard, FinishProjectItem, FinishProjectPlan, FinishSummary, FinishTask,
     UpdateFinishPlanInput,

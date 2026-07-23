@@ -174,6 +174,21 @@ impl ProjectDetailRepository {
         Ok(())
     }
 
+    pub fn apply_folder_setup(
+        connection: &mut Connection,
+        project_id: i64,
+        target_project_path: Option<&str>,
+        retained_source_path: Option<&str>,
+        folders: &[(ProjectFolderCategory, &str)],
+    ) -> AppResult<()> {
+        let transaction = connection.transaction()?;
+        apply_folder_setup_transaction(
+            &transaction, project_id, target_project_path, retained_source_path, folders,
+        )?;
+        transaction.commit()?;
+        Ok(())
+    }
+
     fn folder_paths(connection: &Connection, project_id: i64) -> AppResult<ProjectFolderPaths> {
         let mut folders = ProjectFolderPaths::default();
         let mut statement = connection.prepare(
@@ -192,6 +207,68 @@ impl ProjectDetailRepository {
         }
         Ok(folders)
     }
+}
+
+fn apply_folder_setup_transaction(
+    connection: &Connection, project_id: i64, target: Option<&str>,
+    retained: Option<&str>, folders: &[(ProjectFolderCategory, &str)],
+) -> AppResult<()> {
+    let physical = folder_setup_physical(connection, project_id)?;
+    if let Some(path) = target { update_folder_setup_path(connection, project_id, path)?; }
+    if let Some(path) = retained { insert_retained_source(connection, project_id, path, &physical)?; }
+    for (category, path) in folders { upsert_setup_folder(connection, project_id, *category, path)?; }
+    Ok(())
+}
+
+type FolderSetupPhysical = (String, String, String, String, i64, Option<String>, Option<String>);
+
+fn folder_setup_physical(connection: &Connection, id: i64) -> AppResult<FolderSetupPhysical> {
+    connection.query_row(
+        "SELECT display_name, original_name, extension, daw, file_size,
+                file_created_at, file_modified_at FROM projects WHERE id = ?1",
+        [id],
+        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?,
+                  row.get(4)?, row.get(5)?, row.get(6)?)),
+    ).optional()?.ok_or(AppError::ProjectNotFound)
+}
+
+fn update_folder_setup_path(connection: &Connection, id: i64, path: &str) -> AppResult<()> {
+    connection.execute(
+        "UPDATE projects SET file_path = ?1, is_missing = 0,
+         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?2",
+        params![path, id],
+    )?;
+    Ok(())
+}
+
+fn upsert_setup_folder(
+    connection: &Connection, id: i64, category: ProjectFolderCategory, path: &str,
+) -> AppResult<()> {
+    connection.execute(
+        "INSERT INTO project_folders (project_id, category, folder_path)
+         VALUES (?1, ?2, ?3) ON CONFLICT(project_id, category) DO UPDATE SET
+         folder_path = excluded.folder_path,
+         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')",
+        params![id, category.as_str(), path],
+    )?;
+    Ok(())
+}
+
+fn insert_retained_source(
+    connection: &Connection, parent_id: i64, source: &str, value: &FolderSetupPhysical,
+) -> AppResult<()> {
+    connection.execute(
+        "INSERT INTO projects
+         (display_name, original_name, file_path, extension, daw, file_size,
+          file_created_at, file_modified_at, parent_project_id,
+          version_kind, version_confidence, source_kind)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 'copy', 'confirmed', 'scanned')",
+        params![
+            format!("{} — original conservado", value.0), value.1, source,
+            value.2, value.3, value.4, value.5, value.6, parent_id,
+        ],
+    )?;
+    Ok(())
 }
 
 fn ensure_changed(changed: usize) -> AppResult<()> {
@@ -302,5 +379,22 @@ mod tests {
             &connection, 1, ProjectFolderCategory::Stems, None,
         ).expect("clear stems");
         assert_eq!(ProjectDetailRepository::get(&connection, 1).expect("detail").folders.stems, None);
+    }
+
+    #[test]
+    fn copy_setup_keeps_the_original_as_a_confirmed_version() {
+        let mut connection = database();
+        ProjectDetailRepository::apply_folder_setup(
+            &mut connection, 1, Some("C:/Music/beat/beat.flp"), Some("C:/Music/beat.flp"),
+            &[(ProjectFolderCategory::Stems, "C:/Music/beat/Renders/Stems")],
+        ).expect("apply setup");
+        let main = ProjectDetailRepository::get(&connection, 1).expect("main");
+        let version: (String, String, String) = connection.query_row(
+            "SELECT file_path, version_kind, version_confidence FROM projects WHERE parent_project_id = 1",
+            [], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        ).expect("retained version");
+        assert_eq!(main.file_path, "C:/Music/beat/beat.flp");
+        assert_eq!(main.folders.stems.as_deref(), Some("C:/Music/beat/Renders/Stems"));
+        assert_eq!(version, ("C:/Music/beat.flp".into(), "copy".into(), "confirmed".into()));
     }
 }

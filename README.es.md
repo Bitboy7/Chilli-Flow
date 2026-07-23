@@ -8,14 +8,14 @@
 
 Chilli Flow es un espacio de trabajo de escritorio, local-first, para productores musicales que organizan sesiones de distintos DAWs, comparan mezclas y referencias, recuperan el contexto de sus proyectos y convierten ideas incompletas en canciones terminadas.
 
-Indexa proyectos existentes sin reubicarlos, mantiene los backups vinculados a su sesión principal, descubre audio nuevo exportado dentro del proyecto y crea paquetes neutrales de colaboración sin afirmar que los formatos propietarios pueden convertirse perfectamente.
+Indexa proyectos existentes sin reubicarlos automáticamente, permite organizarlos mediante una propuesta confirmada, mantiene los backups vinculados a su sesión principal, descubre audio nuevo exportado dentro del proyecto y crea paquetes neutrales de colaboración sin afirmar que los formatos propietarios pueden convertirse perfectamente.
 
 > **Estado:** beta de escritorio activa (`0.1.0`). Windows es el flujo verificado actualmente. La arquitectura Tauri también permite apuntar a macOS y Linux, pero esas versiones todavía requieren validación específica.
 
 ## Principios del producto
 
 - **Local-first:** los metadatos permanecen en una base SQLite local; no se requiere cuenta ni servicio en la nube.
-- **No destructivo:** Chilli Flow guarda rutas y metadatos derivados. No reorganiza, mueve ni elimina los proyectos y audios originales.
+- **No destructivo por defecto:** Chilli Flow no cambia archivos sin una vista previa y confirmación explícitas. Al organizar, el usuario decide entre copiar, mover o mantener el proyecto en su ubicación; nunca se sobrescribe un destino.
 - **Neutral respecto al DAW:** los archivos `.flp`, `.als`, `.rpp` y otras sesiones nativas conservan su formato y se abren con su DAW original.
 - **Enfocado en producción:** organización, escucha, comparación, planificación de cierre, versiones y handoff conviven en un mismo workspace.
 
@@ -61,7 +61,9 @@ Nombre del proyecto/
 
 Chilli Flow nunca fabrica una sesión propietaria. Con una plantilla compatible, copia el proyecto real dentro de `Project Files`; sin plantilla, el workspace espera el primer guardado desde el DAW seleccionado y vincula esa sesión durante el siguiente escaneo de biblioteca.
 
-Los proyectos existentes también pueden previsualizar y aplicar una propuesta de carpetas adaptada al DAW. Solo se crean los directorios faltantes; los archivos existentes nunca se mueven.
+Los proyectos existentes también pueden previsualizar una raíz individual y una propuesta adaptada al DAW. Si el archivo está suelto, el usuario elige entre **copiar y organizar** (recomendado), **mover y organizar** o **crear solo la estructura**. La propuesta muestra origen, destino, carpetas y riesgos antes de confirmar. Una copia conserva el original como versión confirmada; un movimiento mantiene la identidad y los metadatos del proyecto. Si el proyecto ya tiene una raíz dedicada, Chilli Flow la reutiliza sin crear una carpeta anidada.
+
+El diseño, las garantías, los casos de colisión y la recuperación de este flujo están documentados en [Organización de proyectos existentes](docs/project-organization.md).
 
 ### Descubrimiento automático de audio
 

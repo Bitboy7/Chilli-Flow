@@ -1,6 +1,5 @@
 use std::{
-    env,
-    fs,
+    env, fs,
     path::{Path, PathBuf},
     process::Command,
 };
@@ -44,7 +43,9 @@ impl WorkspaceService {
             .find(|item| {
                 item.extension == extension && item.daw_name.eq_ignore_ascii_case(input.daw.trim())
             })
-            .ok_or_else(|| AppError::InvalidProject("El DAW seleccionado no coincide con la extensión".into()))?;
+            .ok_or_else(|| {
+                AppError::InvalidProject("El DAW seleccionado no coincide con la extensión".into())
+            })?;
         let parent = platform::canonicalize_directory(&input.parent_directory)?;
         let root = parent.join(name);
         if root.exists() {
@@ -54,7 +55,13 @@ impl WorkspaceService {
         }
 
         fs::create_dir(&root).map_err(AppError::FileOperation)?;
-        let creation = prepare_workspace(&root, name, definition.daw_name, &extension, input.template_path.as_deref());
+        let creation = prepare_workspace(
+            &root,
+            name,
+            definition.daw_name,
+            &extension,
+            input.template_path.as_deref(),
+        );
         let (project_path, original_name, source_kind) = match creation {
             Ok(value) => value,
             Err(error) => {
@@ -131,10 +138,7 @@ impl WorkspaceService {
             .map_err(AppError::FileOperation)
     }
 
-    pub fn open_managed_or_project(
-        detail: &ProjectDetail,
-        path: &Path,
-    ) -> AppResult<()> {
+    pub fn open_managed_or_project(detail: &ProjectDetail, path: &Path) -> AppResult<()> {
         if detail.source_kind == "managed_pending" {
             Self::launch_daw(&detail.daw)
         } else {
@@ -183,7 +187,9 @@ fn prepare_workspace(
     if let Some(template_path) = template_path.filter(|value| !value.trim().is_empty()) {
         let template = dunce::canonicalize(template_path).map_err(AppError::FileOperation)?;
         if !template.is_file() {
-            return Err(AppError::InvalidProject("La plantilla seleccionada ya no existe".into()));
+            return Err(AppError::InvalidProject(
+                "La plantilla seleccionada ya no existe".into(),
+            ));
         }
         let template_extension = template
             .extension()
@@ -235,19 +241,28 @@ fn cleanup_created_root(root: &Path, expected_parent: &Path) {
 
 #[cfg(target_os = "windows")]
 fn detect_executable(daw: &str) -> Option<PathBuf> {
-    let program_files = [env::var_os("ProgramFiles"), env::var_os("ProgramFiles(x86)")]
-        .into_iter()
-        .flatten()
-        .map(PathBuf::from)
-        .collect::<Vec<_>>();
+    let program_files = [
+        env::var_os("ProgramFiles"),
+        env::var_os("ProgramFiles(x86)"),
+    ]
+    .into_iter()
+    .flatten()
+    .map(PathBuf::from)
+    .collect::<Vec<_>>();
     let (vendors, matcher): (&[&str], fn(&str) -> bool) = match daw {
         "FL Studio" => (&["Image-Line"], |name| name == "fl64.exe"),
-        "Ableton Live" => (&["Ableton"], |name| name.starts_with("ableton live") && name.ends_with(".exe")),
+        "Ableton Live" => (&["Ableton"], |name| {
+            name.starts_with("ableton live") && name.ends_with(".exe")
+        }),
         "REAPER" => (&["REAPER (x64)", "REAPER"], |name| name == "reaper.exe"),
-        "Cubase" => (&["Steinberg"], |name| name.starts_with("cubase") && name.ends_with(".exe")),
+        "Cubase" => (&["Steinberg"], |name| {
+            name.starts_with("cubase") && name.ends_with(".exe")
+        }),
         "Studio One" => (&["PreSonus"], |name| name == "studio one.exe"),
         "Pro Tools" => (&["Avid"], |name| name == "protools.exe"),
-        "Reason" => (&["Reason Studios", "Propellerhead"], |name| name == "reason.exe"),
+        "Reason" => (&["Reason Studios", "Propellerhead"], |name| {
+            name == "reason.exe"
+        }),
         _ => return None,
     };
 
@@ -325,8 +340,8 @@ mod tests {
         let parent = tempfile::tempdir().expect("parent");
         let root = parent.path().join("Demo");
         fs::create_dir(&root).expect("root");
-        let (path, _, kind) = prepare_workspace(&root, "Demo", "FL Studio", ".flp", None)
-            .expect("workspace");
+        let (path, _, kind) =
+            prepare_workspace(&root, "Demo", "FL Studio", ".flp", None).expect("workspace");
         assert_eq!(path, root);
         assert_eq!(kind, "managed_pending");
         assert!(root.join("Audio/Stems").is_dir());
@@ -342,13 +357,9 @@ mod tests {
         fs::create_dir(&root).expect("root");
         let template = parent.path().join("Template.flp");
         fs::write(&template, b"template").expect("template");
-        let (path, name, kind) = prepare_workspace(
-            &root,
-            "Demo",
-            "FL Studio",
-            ".flp",
-            template.to_str(),
-        ).expect("workspace");
+        let (path, name, kind) =
+            prepare_workspace(&root, "Demo", "FL Studio", ".flp", template.to_str())
+                .expect("workspace");
         assert_eq!(name, "Demo.flp");
         assert_eq!(kind, "managed");
         assert_eq!(fs::read(path).expect("copied"), b"template");

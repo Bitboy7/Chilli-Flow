@@ -4,6 +4,7 @@ import type {
   AudioAnalysis,
   CoverAsset,
   FolderSetupPlan,
+  FolderSetupMethod,
   ProjectDetail,
   ProjectFacets,
   ProjectFile,
@@ -126,8 +127,8 @@ export function openProjectAssetFolder(projectId: number, category: ProjectFolde
   return invoke<void>("open_project_asset_folder", { projectId, category });
 }
 
-export function previewProjectFolderSetup(projectId: number): Promise<FolderSetupPlan> {
-  return invoke<FolderSetupPlan>("preview_project_folder_setup", { projectId });
+export function previewProjectFolderSetup(projectId: number, method: FolderSetupMethod): Promise<FolderSetupPlan> {
+  return invoke<FolderSetupPlan>("preview_project_folder_setup", { projectId, method });
 }
 
 export function applyProjectFolderSetup(projectId: number, token: number): Promise<ProjectDetail> {

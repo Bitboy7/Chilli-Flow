@@ -13,8 +13,8 @@ use crate::{
     models::{ScanFinished, ScanProgress, ScanSession, WatchedFolder},
     platform::canonicalize_directory,
     repositories::{
-        CustomExtensionRepository, ProjectRepository, ProjectVersionRepository, ScanHistoryMetrics, ScanHistoryRepository,
-        WatchedFolderRepository,
+        CustomExtensionRepository, ProjectRepository, ProjectVersionRepository, ScanHistoryMetrics,
+        ScanHistoryRepository, WatchedFolderRepository,
     },
     scanner::{scan_directory, DawCatalog},
     state::AppState,
@@ -67,10 +67,7 @@ impl ScanService {
                 error_message: Some(error.to_string()),
             });
 
-            app_handle
-                .state::<AppState>()
-                .scans()
-                .finish(session_id);
+            app_handle.state::<AppState>().scans().finish(session_id);
             let _ = app_handle.emit(SCAN_FINISHED_EVENT, finished);
         });
 
@@ -154,8 +151,7 @@ fn run_session(
             },
         );
 
-        let was_cancelled =
-            outcome.was_cancelled || cancellation.load(Ordering::Relaxed);
+        let was_cancelled = outcome.was_cancelled || cancellation.load(Ordering::Relaxed);
         let can_reconcile = can_reconcile_scan(was_cancelled);
         let warning = (outcome.unreadable_entries > 0).then(|| {
             format!(
@@ -177,9 +173,14 @@ fn run_session(
             let mut connection = state.database().connection()?;
             let moved = if can_reconcile && outcome.unreadable_entries == 0 {
                 ProjectRepository::reconcile_moved_in_folder(
-                    &mut connection, &canonical_folder, &outcome.projects, &discovered_paths,
+                    &mut connection,
+                    &canonical_folder,
+                    &outcome.projects,
+                    &discovered_paths,
                 )?
-            } else { 0 };
+            } else {
+                0
+            };
             let upsert = ProjectRepository::upsert_batch(&mut connection, &outcome.projects)?;
             ProjectVersionRepository::classify_discovered(&connection)?;
             let marked_missing = if can_reconcile {
@@ -189,7 +190,9 @@ fn run_session(
                     &discovered_paths,
                     &outcome.unreadable_paths,
                 )?
-            } else { 0 };
+            } else {
+                0
+            };
             if !was_cancelled {
                 WatchedFolderRepository::touch_scanned(&connection, folder.id)?;
             }

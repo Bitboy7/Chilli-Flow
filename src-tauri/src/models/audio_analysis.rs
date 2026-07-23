@@ -11,6 +11,8 @@ pub struct AudioAnalysis {
     pub integrated_lufs: Option<f64>,
     pub loudness_range_lu: Option<f64>,
     pub true_peak_dbfs: Option<f64>,
+    pub bpm: Option<f64>,
+    pub musical_key: Option<String>,
     pub waveform: Vec<f32>,
     pub analyzed_at: String,
     pub from_cache: bool,

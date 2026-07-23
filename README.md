@@ -8,14 +8,14 @@
 
 Chilli Flow is a local-first desktop workspace for music producers who organize sessions from multiple DAWs, compare mixes and references, recover project context, and turn unfinished ideas into completed tracks.
 
-It indexes existing projects without relocating them, keeps backups linked to their main sessions, discovers newly exported audio inside projects, and creates neutral collaboration packages without claiming that proprietary formats can be converted perfectly.
+It indexes existing projects without relocating them automatically, offers an explicitly confirmed organization flow, keeps backups linked to their main sessions, discovers newly exported audio inside projects, and creates neutral collaboration packages without claiming that proprietary formats can be converted perfectly.
 
 > **Status:** active desktop beta (`0.1.0`). Windows is the currently verified workflow. The Tauri architecture can also target macOS and Linux, but those builds still require platform-specific validation.
 
 ## Product principles
 
 - **Local-first:** metadata stays in a local SQLite database; no account or cloud service is required.
-- **Non-destructive:** Chilli Flow stores paths and derived metadata. It does not reorganize, move, or delete original project and audio files.
+- **Non-destructive by default:** Chilli Flow changes no file without a detailed preview and explicit confirmation. During organization, the user chooses whether to copy, move, or keep the project in place; destinations are never overwritten.
 - **DAW-neutral:** `.flp`, `.als`, `.rpp`, and other native sessions keep their original format and open in their original DAW.
 - **Production-focused:** organization, listening, comparison, completion planning, version management, and handoff live in one workspace.
 
@@ -61,7 +61,9 @@ Project name/
 
 Chilli Flow never fabricates a proprietary session. With a compatible template, it copies the real project into `Project Files`; without a template, the workspace waits for the first save from the selected DAW and links that session during the next library scan.
 
-Existing projects can also preview and apply a DAW-aware folder proposal. Only missing directories are created; existing files are never moved.
+Existing projects can preview an individual root and a DAW-aware folder proposal. For a loose project file, the user chooses **copy and organize** (recommended), **move and organize**, or **create folders only**. The preview exposes source, destination, folders, and risks before confirmation. Copying keeps the original as a confirmed version; moving preserves the project's identity and metadata. Projects that already have a dedicated root reuse it without creating a nested duplicate.
+
+The design, guarantees, collision behavior, and recovery model are documented in [Existing project organization](docs/project-organization.md).
 
 ### Automatic audio discovery
 

@@ -14,13 +14,10 @@ use zip::{write::SimpleFileOptions, CompressionMethod, ZipWriter};
 use crate::{
     errors::{AppError, AppResult},
     models::{
-        CreateHandoffInput, HandoffExportResult, HandoffPreview, HandoffSettings,
-        ProjectFile,
+        CreateHandoffInput, HandoffExportResult, HandoffPreview, HandoffSettings, ProjectFile,
     },
     platform,
-    repositories::{
-        HandoffRepository, ProjectDetailRepository, ProjectFileRepository,
-    },
+    repositories::{HandoffRepository, ProjectDetailRepository, ProjectFileRepository},
     state::AppState,
 };
 
@@ -40,12 +37,17 @@ impl HandoffService {
             warnings.push("Falta la tonalidad del proyecto".into());
         }
         let has_preview = project.preview_path.as_deref().is_some_and(|preview_path| {
-            files.iter().any(|file| file.file_path == preview_path && !file.is_missing)
+            files
+                .iter()
+                .any(|file| file.file_path == preview_path && !file.is_missing)
         });
         if !has_preview {
             warnings.push("No hay un preview principal disponible".into());
         }
-        if !files.iter().any(|file| file.category == "stem" && !file.is_missing) {
+        if !files
+            .iter()
+            .any(|file| file.category == "stem" && !file.is_missing)
+        {
             warnings.push("No hay stems asociados".into());
         }
         if files.iter().any(|file| file.is_missing) {
@@ -151,7 +153,8 @@ impl HandoffService {
                 let target_directory = staging.join(directory);
                 fs::create_dir_all(&target_directory).map_err(AppError::FileOperation)?;
                 let target = unique_target(&target_directory, &file.file_name);
-                let source = dunce::canonicalize(&file.file_path).map_err(AppError::FileOperation)?;
+                let source =
+                    dunce::canonicalize(&file.file_path).map_err(AppError::FileOperation)?;
                 let hash = copy_with_hash(&source, &target)?;
                 let relative = target
                     .strip_prefix(&staging)
@@ -172,7 +175,8 @@ impl HandoffService {
             }
 
             if input.include_project_file {
-                let source = dunce::canonicalize(&project.file_path).map_err(AppError::FileOperation)?;
+                let source =
+                    dunce::canonicalize(&project.file_path).map_err(AppError::FileOperation)?;
                 if source.is_file() {
                     let directory = staging.join("Project Files");
                     fs::create_dir_all(&directory).map_err(AppError::FileOperation)?;
@@ -180,7 +184,9 @@ impl HandoffService {
                     let hash = copy_with_hash(&source, &target)?;
                     let relative = target
                         .strip_prefix(&staging)
-                        .map_err(|_| AppError::InvalidPath("ruta exportada fuera del paquete".into()))?
+                        .map_err(|_| {
+                            AppError::InvalidPath("ruta exportada fuera del paquete".into())
+                        })?
                         .to_string_lossy()
                         .replace('\\', "/");
                     checksums.push((hash, relative.clone()));
@@ -194,8 +200,14 @@ impl HandoffService {
                 }
             }
 
-            let sample_rates = analyses.values().map(|value| value.0).collect::<HashSet<_>>();
-            let bit_depths = analyses.values().filter_map(|value| value.1).collect::<HashSet<_>>();
+            let sample_rates = analyses
+                .values()
+                .map(|value| value.0)
+                .collect::<HashSet<_>>();
+            let bit_depths = analyses
+                .values()
+                .filter_map(|value| value.1)
+                .collect::<HashSet<_>>();
             let manifest = json!({
                 "schemaVersion": 1,
                 "packageVersion": version_number,
@@ -286,11 +298,7 @@ impl HandoffService {
         })
     }
 
-    pub fn open_destination(
-        state: &AppState,
-        project_id: i64,
-        path: &str,
-    ) -> AppResult<()> {
+    pub fn open_destination(state: &AppState, project_id: i64, path: &str) -> AppResult<()> {
         let connection = state.database().connection()?;
         if !HandoffRepository::export_exists(&connection, project_id, path)? {
             return Err(AppError::InvalidPath(
@@ -303,10 +311,13 @@ impl HandoffService {
             let canonical = platform::canonicalize_directory(path)?;
             return platform::open_path(&canonical);
         }
-        let canonical = dunce::canonicalize(stored)
-            .map_err(|error| AppError::InvalidPath(format!("No se pudo resolver el ZIP: {error}")))?;
+        let canonical = dunce::canonicalize(stored).map_err(|error| {
+            AppError::InvalidPath(format!("No se pudo resolver el ZIP: {error}"))
+        })?;
         let is_zip = canonical.is_file()
-            && canonical.extension().and_then(|value| value.to_str())
+            && canonical
+                .extension()
+                .and_then(|value| value.to_str())
                 .is_some_and(|extension| extension.eq_ignore_ascii_case("zip"));
         if !is_zip {
             return Err(AppError::InvalidPath(
@@ -326,10 +337,14 @@ fn normalize_settings(mut settings: HandoffSettings) -> AppResult<HandoffSetting
         return Err(AppError::InvalidProject("El compás no es válido".into()));
     }
     if settings.common_start.is_empty() || settings.common_start.chars().count() > 32 {
-        return Err(AppError::InvalidProject("El punto de inicio común no es válido".into()));
+        return Err(AppError::InvalidProject(
+            "El punto de inicio común no es válido".into(),
+        ));
     }
     if settings.plugins.len() > 200 {
-        return Err(AppError::InvalidProject("Se permiten hasta 200 plugins".into()));
+        return Err(AppError::InvalidProject(
+            "Se permiten hasta 200 plugins".into(),
+        ));
     }
     let mut plugins = Vec::new();
     for plugin in settings.plugins {
@@ -342,7 +357,10 @@ fn normalize_settings(mut settings: HandoffSettings) -> AppResult<HandoffSetting
                 "Cada nombre de plugin admite hasta 120 caracteres".into(),
             ));
         }
-        if !plugins.iter().any(|stored: &String| stored.eq_ignore_ascii_case(plugin)) {
+        if !plugins
+            .iter()
+            .any(|stored: &String| stored.eq_ignore_ascii_case(plugin))
+        {
             plugins.push(plugin.to_owned());
         }
     }
@@ -359,7 +377,9 @@ fn normalize_optional(value: Option<String>, max: usize) -> AppResult<Option<Str
         return Ok(None);
     }
     if value.chars().count() > max {
-        return Err(AppError::InvalidProject("Un campo del Handoff supera el límite permitido".into()));
+        return Err(AppError::InvalidProject(
+            "Un campo del Handoff supera el límite permitido".into(),
+        ));
     }
     Ok(Some(value.to_owned()))
 }
@@ -379,7 +399,9 @@ fn package_directory(file: &ProjectFile, variant: &str, is_primary_preview: bool
         return PathBuf::from("Preview");
     }
     match file.category.as_str() {
-        "stem" => PathBuf::from("Audio").join("Stems").join(title_case(variant)),
+        "stem" => PathBuf::from("Audio")
+            .join("Stems")
+            .join(title_case(variant)),
         "mix" => PathBuf::from("Audio").join("Mixes"),
         "master" => PathBuf::from("Audio").join("Masters"),
         "preview" => PathBuf::from("Preview"),
@@ -407,7 +429,10 @@ fn unique_target(directory: &Path, file_name: &str) -> PathBuf {
         return initial;
     }
     let path = Path::new(&safe_name);
-    let stem = path.file_stem().and_then(|value| value.to_str()).unwrap_or("File");
+    let stem = path
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .unwrap_or("File");
     let extension = path.extension().and_then(|value| value.to_str());
     for index in 2..10_000 {
         let name = match extension {
@@ -455,7 +480,9 @@ fn copy_with_hash(source: &Path, target: &Path) -> AppResult<String> {
         if read == 0 {
             break;
         }
-        output.write_all(&buffer[..read]).map_err(AppError::FileOperation)?;
+        output
+            .write_all(&buffer[..read])
+            .map_err(AppError::FileOperation)?;
         hasher.update(&buffer[..read]);
     }
     output.flush().map_err(AppError::FileOperation)?;
@@ -469,12 +496,15 @@ fn write_zip_archive(source_root: &Path, archive_path: &Path) -> AppResult<()> {
 
     for entry in WalkDir::new(source_root).min_depth(1).sort_by_file_name() {
         let entry = entry.map_err(|error| AppError::HandoffArchive(error.to_string()))?;
-        let relative = entry.path().strip_prefix(source_root)
+        let relative = entry
+            .path()
+            .strip_prefix(source_root)
             .map_err(|_| AppError::HandoffArchive("Una ruta temporal salió del paquete".into()))?;
         let name = relative.to_string_lossy().replace('\\', "/");
 
         if entry.file_type().is_dir() {
-            archive.add_directory(format!("{name}/"), directory_options)
+            archive
+                .add_directory(format!("{name}/"), directory_options)
                 .map_err(|error| AppError::HandoffArchive(error.to_string()))?;
             continue;
         }
@@ -482,19 +512,22 @@ fn write_zip_archive(source_root: &Path, archive_path: &Path) -> AppResult<()> {
             continue;
         }
 
-        let metadata = entry.metadata()
+        let metadata = entry
+            .metadata()
             .map_err(|error| AppError::HandoffArchive(error.to_string()))?;
         let options = SimpleFileOptions::default()
             .compression_method(CompressionMethod::Deflated)
             .unix_permissions(0o644)
             .large_file(metadata.len() > u32::MAX as u64);
-        archive.start_file(name, options)
+        archive
+            .start_file(name, options)
             .map_err(|error| AppError::HandoffArchive(error.to_string()))?;
         let mut input = File::open(entry.path()).map_err(AppError::FileOperation)?;
         io::copy(&mut input, &mut archive).map_err(AppError::FileOperation)?;
     }
 
-    let output = archive.finish()
+    let output = archive
+        .finish()
         .map_err(|error| AppError::HandoffArchive(error.to_string()))?;
     output.sync_all().map_err(AppError::FileOperation)
 }
@@ -520,8 +553,15 @@ fn readme_lines(
         "Este paquete no convierte el proyecto entre DAWs.".into(),
         "Contiene archivos neutrales y el proyecto original cuando fue incluido.".into(),
         String::new(),
-        format!("DAW de origen: {daw} {}", settings.daw_version.as_deref().unwrap_or("")),
-        format!("BPM: {}", bpm.map(|value| value.to_string()).unwrap_or_else(|| "No indicado".into())),
+        format!(
+            "DAW de origen: {daw} {}",
+            settings.daw_version.as_deref().unwrap_or("")
+        ),
+        format!(
+            "BPM: {}",
+            bpm.map(|value| value.to_string())
+                .unwrap_or_else(|| "No indicado".into())
+        ),
         format!("Tonalidad: {}", musical_key.unwrap_or("No indicada")),
         format!("Compas: {}", settings.time_signature),
         format!("Inicio comun: {}", settings.common_start),
@@ -567,7 +607,9 @@ fn write_simple_pdf(path: &Path, lines: &[String]) -> AppResult<()> {
         output.extend_from_slice(format!("{} 0 obj\n{}\nendobj\n", index + 1, object).as_bytes());
     }
     let xref = output.len();
-    output.extend_from_slice(format!("xref\n0 {}\n0000000000 65535 f \n", objects.len() + 1).as_bytes());
+    output.extend_from_slice(
+        format!("xref\n0 {}\n0000000000 65535 f \n", objects.len() + 1).as_bytes(),
+    );
     for offset in offsets {
         output.extend_from_slice(format!("{offset:010} 00000 n \n").as_bytes());
     }
@@ -583,20 +625,26 @@ fn write_simple_pdf(path: &Path, lines: &[String]) -> AppResult<()> {
 }
 
 fn pdf_ascii(value: &str) -> String {
-    value.chars().map(|character| match character {
-        'á' | 'à' | 'ä' | 'Á' => 'a',
-        'é' | 'è' | 'ë' | 'É' => 'e',
-        'í' | 'ì' | 'ï' | 'Í' => 'i',
-        'ó' | 'ò' | 'ö' | 'Ó' => 'o',
-        'ú' | 'ù' | 'ü' | 'Ú' => 'u',
-        'ñ' | 'Ñ' => 'n',
-        character if character.is_ascii() => character,
-        _ => '-',
-    }).collect()
+    value
+        .chars()
+        .map(|character| match character {
+            'á' | 'à' | 'ä' | 'Á' => 'a',
+            'é' | 'è' | 'ë' | 'É' => 'e',
+            'í' | 'ì' | 'ï' | 'Í' => 'i',
+            'ó' | 'ò' | 'ö' | 'Ó' => 'o',
+            'ú' | 'ù' | 'ü' | 'Ú' => 'u',
+            'ñ' | 'Ñ' => 'n',
+            character if character.is_ascii() => character,
+            _ => '-',
+        })
+        .collect()
 }
 
 fn escape_pdf(value: &str) -> String {
-    value.replace('\\', "\\\\").replace('(', "\\(").replace(')', "\\)")
+    value
+        .replace('\\', "\\\\")
+        .replace('(', "\\(")
+        .replace(')', "\\)")
 }
 
 fn cleanup_staging(staging: &Path, expected_parent: &Path) {
@@ -631,9 +679,18 @@ mod tests {
             source_label: None,
             relative_path: None,
         };
-        assert_eq!(package_directory(&file, "wet", false), PathBuf::from("Audio/Stems/Wet"));
-        assert_eq!(package_directory(&file, "dry", false), PathBuf::from("Audio/Stems/Dry"));
-        assert_eq!(package_directory(&file, "neutral", true), PathBuf::from("Preview"));
+        assert_eq!(
+            package_directory(&file, "wet", false),
+            PathBuf::from("Audio/Stems/Wet")
+        );
+        assert_eq!(
+            package_directory(&file, "dry", false),
+            PathBuf::from("Audio/Stems/Dry")
+        );
+        assert_eq!(
+            package_directory(&file, "neutral", true),
+            PathBuf::from("Preview")
+        );
     }
 
     #[test]
@@ -656,7 +713,9 @@ mod tests {
         let file = File::open(archive_path).expect("open");
         let mut archive = zip::ZipArchive::new(file).expect("archive");
         assert!(archive.by_name("Project Info.json").is_ok());
-        let mut audio = archive.by_name("Audio/Mixes/demo.wav").expect("audio entry");
+        let mut audio = archive
+            .by_name("Audio/Mixes/demo.wav")
+            .expect("audio entry");
         let mut bytes = Vec::new();
         audio.read_to_end(&mut bytes).expect("read");
         assert_eq!(bytes, b"wave-data");

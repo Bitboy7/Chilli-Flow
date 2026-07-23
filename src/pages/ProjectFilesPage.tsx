@@ -1,6 +1,6 @@
 import {
-  Activity, Check, Circle, CircleCheck, ExternalLink, EyeOff, FileAudio, FilePlus2, Files, FolderSearch, FolderTree,
-  ListPlus, LoaderCircle, Play, RefreshCw, Trash2, X,
+  Activity, AlertTriangle, Check, Circle, CircleCheck, Copy, ExternalLink, EyeOff, FileAudio,
+  FilePlus2, Files, FolderSearch, FolderTree, ListPlus, LoaderCircle, MoveRight, Play, RefreshCw, Trash2, X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useOutletContext } from "react-router-dom";
@@ -12,7 +12,7 @@ import {
 } from "../services/project-service";
 import { usePlaybackStore } from "../stores/playback-store";
 import { useToastStore } from "../stores/toast-store";
-import type { AudioAnalysis, FolderSetupPlan, ProjectFile, ProjectFileCategory } from "../types/projects";
+import type { AudioAnalysis, FolderSetupMethod, FolderSetupPlan, ProjectFile, ProjectFileCategory } from "../types/projects";
 import { errorMessage } from "../utils/errors";
 import type { ProjectWorkspaceContext } from "./ProjectWorkspacePage";
 
@@ -47,6 +47,7 @@ export function ProjectFilesPage() {
   const [activeAnalysisId, setActiveAnalysisId] = useState<number | null>(null);
   const [analysisErrors, setAnalysisErrors] = useState<Record<number, string>>({});
   const [folderPlan, setFolderPlan] = useState<FolderSetupPlan | null>(null);
+  const [folderMethod, setFolderMethod] = useState<FolderSetupMethod>("copy");
   const [folderBusy, setFolderBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const syncInFlight = useRef(false);
@@ -182,6 +183,23 @@ export function ProjectFilesPage() {
     try {
       const result = await analyzeProjectAudio(projectId, file.id);
       setAnalyses((current) => ({ ...current, [file.id]: result }));
+      setProject((current) => current ? {
+        ...current,
+        bpm: result.bpm ?? current.bpm,
+        musicalKey: result.musicalKey ?? current.musicalKey,
+      } : current);
+      if (result.bpm !== null || result.musicalKey !== null) {
+        const detected = [
+          result.bpm === null ? null : `${result.bpm} BPM`,
+          result.musicalKey,
+        ].filter(Boolean).join(" · ");
+        pushToast({
+          kind: "success",
+          title: "Metadatos musicales actualizados",
+          description: `${detected}. Puedes ajustarlos cuando quieras desde Editar.`,
+        });
+        window.dispatchEvent(new Event("chilli:library-changed"));
+      }
     } catch (cause) {
       const message = errorMessage(cause);
       setAnalysisErrors((current) => ({ ...current, [file.id]: message }));
@@ -191,9 +209,10 @@ export function ProjectFilesPage() {
     }
   };
 
-  const previewFolders = async () => {
+  const previewFolders = async (method: FolderSetupMethod = folderMethod) => {
     setFolderBusy(true);
-    try { setFolderPlan(await previewProjectFolderSetup(projectId)); }
+    setFolderMethod(method);
+    try { setFolderPlan(await previewProjectFolderSetup(projectId, method)); }
     catch (cause) { pushToast({ kind: "error", title: "No se pudo preparar la estructura", description: errorMessage(cause) }); }
     finally { setFolderBusy(false); }
   };
@@ -206,7 +225,7 @@ export function ProjectFilesPage() {
       setProject(updated);
       setFolderPlan(null);
       await synchronize(true);
-      pushToast({ kind: "success", title: "Estructura preparada", description: "Solo se crearon carpetas; no se movió ningún archivo." });
+      pushToast({ kind: "success", title: "Estructura preparada", description: folderSuccessDescription(folderPlan) });
     } catch (cause) { pushToast({ kind: "error", title: "No se pudo crear la estructura", description: errorMessage(cause) }); }
     finally { setFolderBusy(false); }
   };
@@ -217,9 +236,9 @@ export function ProjectFilesPage() {
   return (
     <div className="pt-5">
       <header>
-        <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-orange-400/70">Organización sin mover archivos</p>
+        <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-orange-400/70">Organización bajo tu control</p>
         <h2 className="mt-2 text-xl font-semibold text-stone-100">Audio y archivos</h2>
-        <p className="mt-2 max-w-3xl text-sm text-stone-500">Chilli Flow busca audio dentro de las carpetas del proyecto y guarda únicamente sus rutas. Nunca copia, mueve ni elimina los originales.</p>
+        <p className="mt-2 max-w-3xl text-sm text-stone-500">Chilli Flow busca audio y guarda sus rutas. Solo copia o mueve un proyecto cuando eliges ese método y confirmas una propuesta detallada.</p>
       </header>
 
       <section className="mt-6">
@@ -351,19 +370,19 @@ export function ProjectFilesPage() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="flex items-center gap-2 text-sm font-medium text-stone-300"><FolderTree className="size-4 text-orange-300" /> Estructura opcional del proyecto</h2>
-            <p className="mt-2 max-w-2xl text-xs leading-5 text-stone-500">Prepara carpetas para stems, mezclas, masters y referencias respetando la organización habitual de {project.daw}. Nunca mueve archivos existentes.</p>
+            <p className="mt-2 max-w-2xl text-xs leading-5 text-stone-500">Prepara una raíz individual y las carpetas habituales de {project.daw}. Antes de actuar podrás elegir qué ocurre con el archivo del proyecto.</p>
           </div>
           <button type="button" disabled={folderBusy} onClick={() => void previewFolders()} className="inline-flex h-11 items-center gap-2 rounded-xl border border-white/[0.08] px-3.5 text-xs text-stone-300 hover:bg-white/[0.04] disabled:opacity-40">
-            {folderBusy && !folderPlan ? <LoaderCircle className="size-4 animate-spin" /> : <FolderTree className="size-4" />} Ver propuesta
+            {folderBusy && !folderPlan ? <LoaderCircle className="size-4 animate-spin" /> : <FolderTree className="size-4" />} Ver opciones
           </button>
         </div>
 
         {folderPlan ? (
           <div className="mt-4 overflow-hidden rounded-xl border border-white/[0.07] bg-black/10">
-            <div className="border-b border-white/[0.06] px-4 py-3">
-              <p className="text-[0.7rem] uppercase tracking-wider text-stone-600">Raíz</p>
-              <p className="mt-1 break-all text-xs text-stone-400">{folderPlan.rootPath}</p>
-            </div>
+            {(folderPlan.willRelocateProject || folderPlan.method === "foldersOnly") ? (
+              <FolderMethodPicker value={folderMethod} busy={folderBusy} onChange={(method) => void previewFolders(method)} />
+            ) : null}
+            <FolderPlanSummary plan={folderPlan} />
             <ul className="divide-y divide-white/[0.055]">
               {folderPlan.items.map((item) => (
                 <li key={item.category} className="flex items-center gap-3 px-4 py-2.5">
@@ -377,7 +396,7 @@ export function ProjectFilesPage() {
             <div className="flex justify-end gap-2 border-t border-white/[0.06] p-3">
               <button type="button" disabled={folderBusy} onClick={() => setFolderPlan(null)} className="inline-flex h-11 items-center gap-2 rounded-xl px-3 text-xs text-stone-500 hover:bg-white/[0.04] hover:text-stone-300"><X className="size-3.5" /> Cancelar</button>
               <button type="button" disabled={folderBusy} onClick={() => void applyFolders()} className="inline-flex h-11 items-center gap-2 rounded-xl bg-orange-500 px-4 text-xs font-semibold text-stone-950 hover:bg-orange-400 disabled:opacity-40">
-                {folderBusy ? <LoaderCircle className="size-4 animate-spin" /> : <Check className="size-4" />} Confirmar y crear
+                {folderBusy ? <LoaderCircle className="size-4 animate-spin" /> : <Check className="size-4" />} {folderActionLabel(folderPlan)}
               </button>
             </div>
           </div>
@@ -386,6 +405,83 @@ export function ProjectFilesPage() {
     </div>
   );
 }
+
+function FolderMethodPicker({
+  value, busy, onChange,
+}: {
+  value: FolderSetupMethod;
+  busy: boolean;
+  onChange: (method: FolderSetupMethod) => void;
+}) {
+  const options = [
+    { value: "copy" as const, title: "Copiar y organizar", note: "Recomendado", Icon: Copy,
+      body: "La copia organizada será el proyecto principal; el original quedará accesible en Versiones." },
+    { value: "move" as const, title: "Mover y organizar", note: null, Icon: MoveRight,
+      body: "Deja una sola copia. Las referencias relativas del DAW podrían necesitar revisión." },
+    { value: "foldersOnly" as const, title: "Solo crear estructura", note: null, Icon: FolderTree,
+      body: "El archivo permanece donde está y las carpetas de producción quedan aisladas." },
+  ];
+  return (
+    <fieldset className="border-b border-white/[0.06] p-4">
+      <legend className="px-1 text-xs font-medium text-stone-300">¿Qué quieres hacer con el proyecto?</legend>
+      <div className="mt-3 grid gap-2 lg:grid-cols-3">
+        {options.map(({ value: method, title, note, Icon, body }) => (
+          <label key={method} className={[
+            "flex cursor-pointer gap-3 rounded-xl border p-3 transition-colors",
+            value === method ? "border-orange-400/35 bg-orange-400/[0.055]" : "border-white/[0.07] hover:bg-white/[0.025]",
+            busy ? "pointer-events-none opacity-50" : "",
+          ].join(" ")}>
+            <input type="radio" name="folder-setup-method" value={method} checked={value === method}
+              disabled={busy} onChange={() => onChange(method)} className="mt-1 accent-orange-500" />
+            <span className="min-w-0">
+              <span className="flex items-center gap-2 text-xs font-medium text-stone-200"><Icon className="size-3.5" /> {title}</span>
+              {note ? <span className="mt-1 inline-block rounded-md bg-orange-400/10 px-1.5 py-0.5 text-[0.65rem] text-orange-200">{note}</span> : null}
+              <span className="mt-1 block text-[0.7rem] leading-5 text-stone-500">{body}</span>
+            </span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+function FolderPlanSummary({ plan }: { plan: FolderSetupPlan }) {
+  const warning = plan.method === "copy"
+    ? "El original y la copia pueden divergir si editas ambos. Chilli Flow conservará el original como versión confirmada."
+    : plan.method === "move"
+      ? "Mover puede afectar samples enlazados mediante rutas relativas. Comprueba el proyecto en el DAW después de organizarlo."
+      : "El archivo del DAW no cambiará de ubicación; las nuevas carpetas funcionarán como rutas configuradas por Chilli Flow.";
+  return (
+    <div className="border-b border-white/[0.06] px-4 py-3">
+      <p className="text-[0.7rem] font-medium text-stone-500">Acciones propuestas</p>
+      {plan.willRelocateProject ? (
+        <div className="mt-2 grid gap-1 text-xs text-stone-400">
+          <p className="break-all"><span className="text-stone-600">Origen:</span> {plan.sourcePath}</p>
+          <p className="break-all"><span className="text-stone-600">Destino:</span> {plan.targetProjectPath}</p>
+        </div>
+      ) : (
+        <p className="mt-2 text-xs text-stone-400">{plan.method === "foldersOnly" ? "El archivo permanecerá en su ubicación actual." : "El proyecto ya tiene una raíz dedicada; no se copiará ni moverá."}</p>
+      )}
+      <div className="mt-3 rounded-lg bg-amber-300/[0.055] px-3 py-2.5 text-[0.7rem] leading-5 text-amber-100/65">
+        <p className="flex gap-2"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" /> <span>{warning}</span></p>
+      </div>
+      <p className="mt-3 text-[0.7rem] text-stone-600">Raíz {plan.rootExists ? "existente" : "que se creará"}</p>
+      <p className="mt-1 break-all text-xs text-stone-400">{plan.rootPath}</p>
+    </div>
+  );
+}
+
+function folderActionLabel(plan: FolderSetupPlan) {
+  if (!plan.willRelocateProject) return "Crear estructura";
+  return plan.method === "copy" ? "Copiar y crear estructura" : "Mover y crear estructura";
+}
+
+function folderSuccessDescription(plan: FolderSetupPlan) {
+  if (!plan.willRelocateProject) return "Se configuraron las carpetas sin cambiar la ubicación del proyecto.";
+  if (plan.method === "copy") return "La copia organizada es ahora el proyecto principal; el original quedó en Versiones.";
+  return "El proyecto se movió a su raíz individual y sus carpetas quedaron configuradas.";
+}
+
 function formatBytes(bytes: number) { if (bytes < 1024) return bytes + " B"; if (bytes < 1024 ** 2) return (bytes / 1024).toFixed(1) + " KB"; if (bytes < 1024 ** 3) return (bytes / 1024 ** 2).toFixed(1) + " MB"; return (bytes / 1024 ** 3).toFixed(2) + " GB"; }
 
 function AudioAnalysisLoading({ fileName }: { fileName: string }) {
@@ -503,11 +599,14 @@ function AudioAnalysisPanel({
             </div>
           </div>
 
-          <dl className="mt-3 grid grid-cols-3 divide-x divide-white/[0.07] rounded-xl bg-white/[0.025] py-3">
+          <dl className="mt-3 grid grid-cols-2 rounded-xl bg-white/[0.025] py-3 sm:grid-cols-5 sm:divide-x sm:divide-white/[0.07]">
+            <AnalysisMetric label="BPM" value={analysis.bpm === null ? "—" : analysis.bpm.toString()} />
+            <AnalysisMetric label="Tonalidad" value={analysis.musicalKey ?? "—"} />
             <AnalysisMetric label="LUFS integrado" value={formatMetric(analysis.integratedLufs, " LUFS")} />
             <AnalysisMetric label="True peak" value={formatMetric(analysis.truePeakDbfs, " dBTP")} />
             <AnalysisMetric label="Rango dinámico" value={formatMetric(analysis.loudnessRangeLu, " LU")} />
           </dl>
+          <p className="mt-2 text-xs leading-5 text-stone-500">BPM y tonalidad se asignaron al proyecto automáticamente. Puedes corregirlos desde <span className="text-stone-300">Editar</span>.</p>
         </div>
 
         <aside className="rounded-xl bg-white/[0.025] p-4" aria-label="Estadísticas del análisis">

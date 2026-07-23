@@ -1,7 +1,7 @@
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
-import chilliFlowLogo from "../../assets/chilli-flow.svg";
+import chilliFlowLogo from "../../assets/chilli-flow.png";
 import { useUiStore } from "../../stores/ui-store";
 import {
   managementNavigation,

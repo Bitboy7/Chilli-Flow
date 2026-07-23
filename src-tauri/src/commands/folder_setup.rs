@@ -1,7 +1,7 @@
 use tauri::State;
 
 use crate::{
-    models::{FolderSetupPlan, ProjectDetail},
+    models::{FolderSetupMethod, FolderSetupPlan, ProjectDetail},
     services::FolderSetupService,
     state::AppState,
 };
@@ -10,8 +10,9 @@ use crate::{
 pub fn preview_project_folder_setup(
     state: State<'_, AppState>,
     project_id: i64,
+    method: FolderSetupMethod,
 ) -> Result<FolderSetupPlan, String> {
-    FolderSetupService::preview(&state, project_id).map_err(|error| error.to_string())
+    FolderSetupService::preview(&state, project_id, method).map_err(|error| error.to_string())
 }
 
 #[tauri::command]

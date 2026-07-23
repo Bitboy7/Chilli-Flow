@@ -22,15 +22,17 @@ impl ExtensionService {
                 is_enabled: true,
             })
             .collect::<Vec<_>>();
-        catalog.extend(custom_extensions.into_iter().map(|extension| {
-            ExtensionCatalogItem {
-                extension: extension.extension,
-                daw_name: extension.daw_name,
-                is_custom: true,
-                custom_extension_id: Some(extension.id),
-                is_enabled: extension.is_enabled,
-            }
-        }));
+        catalog.extend(
+            custom_extensions
+                .into_iter()
+                .map(|extension| ExtensionCatalogItem {
+                    extension: extension.extension,
+                    daw_name: extension.daw_name,
+                    is_custom: true,
+                    custom_extension_id: Some(extension.id),
+                    is_enabled: extension.is_enabled,
+                }),
+        );
         Ok(catalog)
     }
 
@@ -39,16 +41,12 @@ impl ExtensionService {
         raw_extension: &str,
         raw_daw_name: &str,
     ) -> AppResult<CustomExtension> {
-        let extension =
-            normalize_extension(raw_extension).ok_or(AppError::InvalidExtension)?;
+        let extension = normalize_extension(raw_extension).ok_or(AppError::InvalidExtension)?;
         let daw_name = raw_daw_name.trim();
         if daw_name.is_empty() || daw_name.len() > 80 {
             return Err(AppError::InvalidDawName);
         }
-        if KNOWN_DAWS
-            .iter()
-            .any(|known| known.extension == extension)
-        {
+        if KNOWN_DAWS.iter().any(|known| known.extension == extension) {
             return Err(AppError::ExtensionAlreadyExists);
         }
 

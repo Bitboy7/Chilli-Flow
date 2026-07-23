@@ -160,6 +160,8 @@ export interface AudioAnalysis {
   integratedLufs: number | null;
   loudnessRangeLu: number | null;
   truePeakDbfs: number | null;
+  bpm: number | null;
+  musicalKey: string | null;
   waveform: number[];
   analyzedAt: string;
   fromCache: boolean;
@@ -169,9 +171,16 @@ export interface FolderSetupPlan {
   token: number;
   projectId: number;
   daw: string;
+  method: FolderSetupMethod;
+  sourcePath: string;
+  targetProjectPath: string;
+  willRelocateProject: boolean;
+  rootExists: boolean;
   rootPath: string;
   items: Array<{ category: ProjectFolderCategory; path: string; exists: boolean }>;
 }
+
+export type FolderSetupMethod = "copy" | "move" | "foldersOnly";
 
 export interface DawInstallation {
   daw: string;

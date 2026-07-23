@@ -17,7 +17,9 @@ impl PlaybackService {
             .and_then(|value| serde_json::from_str::<PlaybackSessionInput>(&value).ok())
             .unwrap_or_default();
         let stored = validate(stored).unwrap_or_default();
-        let current_ref = stored.current_index.and_then(|index| stored.queue.get(index).copied());
+        let current_ref = stored
+            .current_index
+            .and_then(|index| stored.queue.get(index).copied());
         let mut queue = Vec::with_capacity(stored.queue.len());
         let mut current_index = None;
         for reference in stored.queue {
@@ -34,7 +36,11 @@ impl PlaybackService {
         Ok(PlaybackSession {
             queue,
             current_index,
-            position_seconds: if current_index.is_some() { stored.position_seconds } else { 0.0 },
+            position_seconds: if current_index.is_some() {
+                stored.position_seconds
+            } else {
+                0.0
+            },
             volume: stored.volume,
             repeat_mode: stored.repeat_mode,
             shuffle: stored.shuffle,
@@ -57,15 +63,24 @@ impl PlaybackService {
 
 fn validate(input: PlaybackSessionInput) -> AppResult<PlaybackSessionInput> {
     if input.queue.len() > MAX_QUEUE_LENGTH {
-        return Err(AppError::InvalidPlaybackSession("la cola supera 500 archivos".into()));
+        return Err(AppError::InvalidPlaybackSession(
+            "la cola supera 500 archivos".into(),
+        ));
     }
-    if input.current_index.is_some_and(|index| index >= input.queue.len()) {
-        return Err(AppError::InvalidPlaybackSession("posición de cola no válida".into()));
+    if input
+        .current_index
+        .is_some_and(|index| index >= input.queue.len())
+    {
+        return Err(AppError::InvalidPlaybackSession(
+            "posición de cola no válida".into(),
+        ));
     }
     if !input.position_seconds.is_finite()
         || !(0.0..=MAX_POSITION_SECONDS).contains(&input.position_seconds)
     {
-        return Err(AppError::InvalidPlaybackSession("posición de audio no válida".into()));
+        return Err(AppError::InvalidPlaybackSession(
+            "posición de audio no válida".into(),
+        ));
     }
     if !input.volume.is_finite() || !(0.0..=1.0).contains(&input.volume) {
         return Err(AppError::InvalidPlaybackSession("volumen no válido".into()));
@@ -81,7 +96,10 @@ mod tests {
     #[test]
     fn rejects_invalid_queue_state() {
         let result = validate(PlaybackSessionInput {
-            queue: vec![PlaybackTrackRef { project_id: 1, file_id: 2 }],
+            queue: vec![PlaybackTrackRef {
+                project_id: 1,
+                file_id: 2,
+            }],
             current_index: Some(2),
             position_seconds: 0.0,
             volume: 0.8,

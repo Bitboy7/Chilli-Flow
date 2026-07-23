@@ -18,19 +18,31 @@ impl ProjectVersionService {
         ProjectVersionRepository::list(&connection, project_id)
     }
 
-    pub fn confirm(state: &AppState, project_id: i64, version_id: i64) -> AppResult<ProjectVersionSet> {
+    pub fn confirm(
+        state: &AppState,
+        project_id: i64,
+        version_id: i64,
+    ) -> AppResult<ProjectVersionSet> {
         let connection = state.database().connection()?;
         ProjectVersionRepository::confirm(&connection, project_id, version_id)?;
         ProjectVersionRepository::list(&connection, project_id)
     }
 
-    pub fn detach(state: &AppState, project_id: i64, version_id: i64) -> AppResult<ProjectVersionSet> {
+    pub fn detach(
+        state: &AppState,
+        project_id: i64,
+        version_id: i64,
+    ) -> AppResult<ProjectVersionSet> {
         let connection = state.database().connection()?;
         ProjectVersionRepository::detach(&connection, project_id, version_id)?;
         ProjectVersionRepository::list(&connection, project_id)
     }
 
-    pub fn promote(state: &AppState, project_id: i64, version_id: i64) -> AppResult<ProjectVersionSet> {
+    pub fn promote(
+        state: &AppState,
+        project_id: i64,
+        version_id: i64,
+    ) -> AppResult<ProjectVersionSet> {
         let mut connection = state.database().connection()?;
         ProjectVersionRepository::promote(&mut connection, project_id, version_id)?;
         ProjectVersionRepository::list(&connection, project_id)
