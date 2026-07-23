@@ -39,7 +39,7 @@ It indexes existing projects without relocating them automatically, offers an ex
 - Keeps display-name editing separate from validated physical file renaming.
 - Configures project folders for stems, mixes, masters, and references.
 
-> BPM and key are currently user-managed metadata. Automatic tempo and key detection are not implemented yet.
+> Analyzing compatible audio automatically estimates BPM and key and assigns the available results to the project. These estimates remain editable because complex rhythms, modulations, and sparse material can require manual correction.
 
 ### Managed workspaces
 
@@ -111,6 +111,7 @@ M4A, AAC, AIFF, and AIF files can be discovered and organized, but the built-in 
 Analysis of a compatible file provides:
 
 - Duration, sample rate, bit depth, and channel count.
+- Estimated BPM and musical key, automatically assigned to the project and available for manual correction.
 - Integrated LUFS, loudness range, and true peak.
 - A normalized-amplitude waveform with time markers.
 - Rule-based technical observations for level, peak headroom, and dynamics.
@@ -187,7 +188,7 @@ Additional safe extensions can be added in Settings without replacing the built-
 
 ## Local data and security
 
-- Metadata, scan history, Finish Mode, playback, analysis, handoff history, and discovered-file state are stored in SQLite using schema v10.
+- Metadata, scan history, Finish Mode, playback, analysis, handoff history, and discovered-file state are stored in SQLite using schema v11.
 - Artwork and audio stay on disk; media is not stored as blobs in the database.
 - Library scans start only when requested and can be cancelled.
 - Audio synchronization reads only recognized folders or folders explicitly configured for the project.
@@ -275,7 +276,7 @@ docs/                Historical architecture and milestone notes
 
 - Native project internals are not converted between DAWs.
 - A handoff cannot preserve every routing, automation, plugin, virtual instrument, preset, sidechain, marker, tempo map, or DAW-specific edit.
-- BPM and key are not yet detected automatically from audio.
+- Automatic BPM and key detection is heuristic; complex rhythms, tempo changes, modulations, or sparse material can produce estimates that need manual correction.
 - Library indexing requires a user action. Audio discovery refreshes when the tab opens, the application regains focus, or the user selects Refresh; there is no permanent watcher.
 - Backup grouping is conservative, and ambiguous matches require confirmation.
 - Codec behavior can depend on the operating system's webview.

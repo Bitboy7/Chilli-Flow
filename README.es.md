@@ -39,7 +39,7 @@ Indexa proyectos existentes sin reubicarlos automáticamente, permite organizarl
 - Mantiene la edición del nombre visual separada del renombrado físico validado.
 - Configura carpetas del proyecto para stems, mezclas, masters y referencias.
 
-> El BPM y la tonalidad son actualmente metadatos administrados por el usuario. La detección automática de tempo y tonalidad todavía no está implementada.
+> Al analizar audio compatible se estiman automáticamente el BPM y la tonalidad, y los resultados disponibles se asignan al proyecto. Estas estimaciones siguen siendo editables porque los ritmos complejos, las modulaciones y el material disperso pueden requerir corrección manual.
 
 ### Workspaces administrados
 
@@ -111,6 +111,7 @@ M4A, AAC, AIFF y AIF pueden descubrirse y organizarse, pero el reproductor y ana
 El análisis de un archivo compatible obtiene:
 
 - Duración, sample rate, bit depth y número de canales.
+- BPM y tonalidad estimados, asignados automáticamente al proyecto y disponibles para corrección manual.
 - LUFS integrado, rango de sonoridad y true peak.
 - Una forma de onda de amplitud normalizada, amplia y con marcadores de tiempo.
 - Observaciones técnicas basadas en reglas para nivel, margen de pico y dinámica.
@@ -187,7 +188,7 @@ Desde Configuración pueden añadirse extensiones seguras sin reemplazar el cat�
 
 ## Datos locales y seguridad
 
-- Metadatos, historial de escaneos, Finish Mode, reproducción, análisis, historial de handoffs y estado de archivos descubiertos se almacenan en SQLite con esquema v10.
+- Metadatos, historial de escaneos, Finish Mode, reproducción, análisis, historial de handoffs y estado de archivos descubiertos se almacenan en SQLite con esquema v11.
 - Artwork y audio permanecen en el disco; los medios no se guardan como blobs en la base de datos.
 - Los escaneos de biblioteca solo comienzan cuando se solicitan y pueden cancelarse.
 - La sincronización de audio lee únicamente carpetas reconocidas o configuradas explícitamente para el proyecto.
@@ -275,7 +276,7 @@ docs/                Notas históricas de arquitectura e hitos
 
 - Las estructuras internas de proyectos nativos no se convierten entre DAWs.
 - Un handoff no puede conservar todos los routings, automatizaciones, plugins, instrumentos virtuales, presets, sidechains, marcadores, mapas de tempo o ediciones específicas del DAW.
-- El BPM y la tonalidad todavía no se detectan automáticamente desde audio.
+- La detección automática de BPM y tonalidad es heurística; los ritmos complejos, cambios de tempo, modulaciones o material disperso pueden producir estimaciones que requieran corrección manual.
 - La indexación de biblioteca requiere una acción del usuario. El descubrimiento de audio se actualiza al abrir la pestaña, recuperar el foco o pulsar Actualizar; no existe un watcher permanente.
 - La agrupación de backups es conservadora y las coincidencias ambiguas requieren confirmación.
 - El comportamiento de codecs puede depender del webview del sistema operativo.
